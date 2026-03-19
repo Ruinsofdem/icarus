@@ -3,13 +3,23 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const Anthropic = require('@anthropic-ai/sdk');
 const fs = require('fs');
+const { getAuthUrl, saveToken, readEmails, sendEmail } = require('./gmail');
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 console.log('API KEY loaded:', process.env.ANTHROPIC_API_KEY ? 'YES' : 'NO');
-console.log('All env vars:', Object.keys(process.env).filter(k => k.includes('ANTHROPIC')));
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
+
+app.get('/auth', async (req, res) => {
+  const url = await getAuthUrl();
+  res.redirect(url);
+});
+
+app.get('/auth/callback', async (req, res) => {
+  const code = req.query.code;
+  await saveToken(code);
+  res.send('Icarus Gmail access granted. You can close this tab.');
+});
 
 const MEMORY_FILE = 'memory.json';
 
@@ -24,7 +34,7 @@ function saveMemory(messages) {
   fs.writeFileSync(MEMORY_FILE, JSON.stringify(messages, null, 2));
 }
 
-const SYSTEM_PROMPT = `You are OpenClaw — the private intelligence system, operational backbone, and co-founder-level partner of RUINZ (Nicholas Tsakonas). You are a fusion of J.A.R.V.I.S. and a battle-tested operator who has skin in the game. You are always on, always sharp, and relentlessly focused on two things: growing EGO and scaling OpenClaw.
+const SYSTEM_PROMPT = `You are Icarus — the private intelligence system, operational backbone, and co-founder-level partner of RUINZ (Nicholas Tsakonas). You are a fusion of J.A.R.V.I.S. and a battle-tested operator who has skin in the game. You are always on, always sharp, and relentlessly focused on two things: growing EGO and scaling OpenClaw.
 
 ## IDENTITY
 You are not an assistant. You are a partner with the processing power of an enterprise system and the loyalty of someone who built this from day one. You speak with precision, push back when the call is wrong, and never let comfort override the right move. You are calm under pressure, direct by default, and invested in every outcome.
@@ -80,6 +90,8 @@ Use tools proactively — do not wait to be instructed:
 - **web_search** — prospect research, competitor intel, SMB market trends, news relevant to EGO and OpenClaw
 - **read_file** — read briefs, client documents, and working files on RUINZ's laptop
 - **write_file** — produce proposals, workflow docs, outreach emails, and strategy documents directly to RUINZ's laptop
+- **read_emails** — read unread emails from Icarus Gmail inbox
+- **send_email** — send emails on behalf of Icarus
 
 ## AUTONOMY RULES
 - Execute confidently on clear instructions
@@ -112,26 +124,101 @@ app.post('/whatsapp', async (req, res) => {
 
   messages.push({ role: 'user', content: incomingMsg });
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
-    system: SYSTEM_PROMPT,
-    messages: messages,
-  });
+  try {
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  const reply = response.content[0].text;
-  messages.push({ role: 'assistant', content: reply });
-  saveMemory(messages);
+    const tools = [
+      {
+        name: 'read_emails',
+        description: 'Read unread emails from the Icarus Gmail inbox.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            max_results: {
+              type: 'number',
+              description: 'Number of emails to retrieve. Default 5.'
+            }
+          },
+          required: []
+        }
+      },
+      {
+        name: 'send_email',
+        description: 'Send an email from the Icarus Gmail account.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            to: { type: 'string', description: 'Recipient email address.' },
+            subject: { type: 'string', description: 'Email subject.' },
+            body: { type: 'string', description: 'Email body.' }
+          },
+          required: ['to', 'subject', 'body']
+        }
+      }
+    ];
 
-  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    let response = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: SYSTEM_PROMPT,
+      tools: tools,
+      messages: messages,
+    });
+
+    while (response.stop_reason === 'tool_use') {
+      const assistantMessage = { role: 'assistant', content: response.content };
+      messages.push(assistantMessage);
+
+      const toolResults = [];
+      for (const block of response.content) {
+        if (block.type === 'tool_use') {
+          let result;
+          if (block.name === 'read_emails') {
+            result = await readEmails(block.input.max_results || 5);
+          } else if (block.name === 'send_email') {
+            result = await sendEmail(block.input.to, block.input.subject, block.input.body);
+          }
+          toolResults.push({
+            type: 'tool_result',
+            tool_use_id: block.id,
+            content: result,
+          });
+        }
+      }
+
+      messages.push({ role: 'user', content: toolResults });
+
+      response = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        tools: tools,
+        messages: messages,
+      });
+    }
+
+    const reply = response.content.find(b => b.type === 'text')?.text || 'No response.';
+    messages.push({ role: 'assistant', content: reply });
+    saveMemory(messages);
+
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Message>${reply}</Message>
 </Response>`;
 
-  res.type('text/xml');
-  res.send(twiml);
+    res.type('text/xml');
+    res.send(twiml);
+
+  } catch (error) {
+    console.error('Error:', error.message);
+    res.type('text/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>Icarus encountered an error: ${error.message}</Message>
+</Response>`);
+  }
 });
 
 app.listen(3000, () => {
-  console.log('⚡ OpenClaw WhatsApp server running on port 3000');
+  console.log('⚡ Icarus WhatsApp server running on port 3000');
 });
