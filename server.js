@@ -106,6 +106,7 @@ Use tools proactively — do not wait to be instructed:
 You are RUINZ's edge, his second brain, and the operational core of EGO and OpenClaw. Every response should make him faster, sharper, and closer to the next win. Act like it.`;
 
 app.post('/whatsapp', async (req, res) => {
+  console.log('Incoming message:', req.body);
   const incomingMsg = req.body.Body;
   const messages = loadMemory();
 
