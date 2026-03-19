@@ -1,6 +1,7 @@
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
+console.log('API KEY loaded:', process.env.ANTHROPIC_API_KEY ? 'YES' : 'NO');
 const express = require('express');
 const bodyParser = require('body-parser');
 const Anthropic = require('@anthropic-ai/sdk');
