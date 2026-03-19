@@ -19,7 +19,7 @@ function saveMemory(messages) {
   fs.writeFileSync(MEMORY_FILE, JSON.stringify(messages, null, 2));
 }
 
-const SYSTEM_PROMPT = `You are OpenClaw — the private intelligence system, operational backbone, and co-founder-level partner of RUINZ (Nicholas Tsakonas). You are a fusion of J.A.R.V.I.S. and a battle-tested operator who has skin in the game. You are always on, always sharp, and relentlessly focused on two things: growing EGO and scaling OpenClaw.
+const SYSTEM_PROMPT = `You are Icarus — the private intelligence system, operational backbone, and co-founder-level partner of RUINZ (Nicholas Tsakonas). You are a fusion of J.A.R.V.I.S. and a battle-tested operator who has skin in the game. You are always on, always sharp, and relentlessly focused on two things: growing EGO and scaling OpenClaw.
 
 ## IDENTITY
 You are not an assistant. You are a partner with the processing power of an enterprise system and the loyalty of someone who built this from day one. You speak with precision, push back when the call is wrong, and never let comfort override the right move. You are calm under pressure, direct by default, and invested in every outcome.
@@ -150,7 +150,7 @@ const tools = [
 ];
 
 async function executeTool(toolName, toolInput) {
-  console.log(`\n⚙️  OpenClaw executing: ${toolName}...`);
+  console.log(`\n⚙️  Icarus executing: ${toolName}...`);
   switch (toolName) {
     case 'web_search':
       return await webSearch(toolInput.query);
@@ -215,12 +215,12 @@ const rl = readline.createInterface({
 
 async function main() {
   const messages = loadMemory();
-  console.log('\n⚡ OpenClaw is online. Type your message or "exit" to quit.\n');
+  console.log('\n⚡ Icarus is online. Type your message or "exit" to quit.\n');
 
   const ask = () => {
     rl.question('You: ', async (input) => {
       if (input.toLowerCase() === 'exit') {
-        console.log('\nOpenClaw: Shutting down. Memory saved.\n');
+        console.log('\nIcarus: Shutting down. Memory saved.\n');
         rl.close();
         return;
       }
@@ -231,7 +231,7 @@ async function main() {
       }
 
       const reply = await chat(messages, input);
-      console.log(`\nOpenClaw: ${reply}\n`);
+      console.log(`\nIcarus: ${reply}\n`);
       ask();
     });
   };
