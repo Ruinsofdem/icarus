@@ -1,16 +1,15 @@
-if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config();
-}
-console.log('API KEY loaded:', process.env.ANTHROPIC_API_KEY ? 'YES' : 'NO');
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const Anthropic = require('@anthropic-ai/sdk');
 const fs = require('fs');
 
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+console.log('API KEY loaded:', process.env.ANTHROPIC_API_KEY ? 'YES' : 'NO');
+console.log('All env vars:', Object.keys(process.env).filter(k => k.includes('ANTHROPIC')));
+
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const MEMORY_FILE = 'memory.json';
 
