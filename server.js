@@ -6,6 +6,9 @@ const fs = require('fs');
 const { getAuthUrl, saveToken, readEmails, sendEmail } = require('./gmail');
 
 console.log('API KEY loaded:', process.env.ANTHROPIC_API_KEY ? 'YES' : 'NO');
+console.log('GOOGLE CLIENT ID loaded:', process.env.GOOGLE_CLIENT_ID ? 'YES' : 'NO');
+console.log('GOOGLE CLIENT SECRET loaded:', process.env.GOOGLE_CLIENT_SECRET ? 'YES' : 'NO');
+console.log('GOOGLE REDIRECT URI loaded:', process.env.GOOGLE_REDIRECT_URI ? 'YES' : 'NO');
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -16,9 +19,14 @@ app.get('/auth', async (req, res) => {
 });
 
 app.get('/auth/callback', async (req, res) => {
-  const code = req.query.code;
-  await saveToken(code);
-  res.send('Icarus Gmail access granted. You can close this tab.');
+  try {
+    const code = req.query.code;
+    await saveToken(code);
+    res.send('Icarus Gmail access granted. You can close this tab.');
+  } catch (error) {
+    console.error('Auth callback error:', error.message);
+    res.status(500).send('Auth failed: ' + error.message);
+  }
 });
 
 const MEMORY_FILE = 'memory.json';
