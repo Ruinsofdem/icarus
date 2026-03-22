@@ -57,7 +57,13 @@ async function saveToken(code) {
 
   const auth = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 
-  const { tokens } = await auth.getToken(code);
+  console.log('Auth object created:', typeof auth);
+  console.log('getToken method:', typeof auth.getToken);
+
+  const response = await auth.getToken(code);
+  console.log('Token response:', JSON.stringify(response));
+
+  const tokens = response.tokens;
   auth.setCredentials(tokens);
   fs.writeFileSync(TOKEN_FILE, JSON.stringify(tokens));
   return tokens;
