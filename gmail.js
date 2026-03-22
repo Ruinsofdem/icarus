@@ -19,6 +19,12 @@ function getAuthClient() {
 }
 
 async function getAuthUrl() {
+  console.log('Building auth URL with:', {
+    clientId: process.env.GOOGLE_CLIENT_ID ? 'YES' : 'NO',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'YES' : 'NO',
+    redirectUri: process.env.GOOGLE_REDIRECT_URI
+  });
+
   const auth = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
@@ -35,11 +41,21 @@ async function getAuthUrl() {
 }
 
 async function saveToken(code) {
-  const auth = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
+  console.log('EXACT VALUES:',
+    'ID:', process.env.GOOGLE_CLIENT_ID,
+    'SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'exists' : 'missing',
+    'URI:', process.env.GOOGLE_REDIRECT_URI
   );
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+
+  if (!clientId || !clientSecret || !redirectUri) {
+    throw new Error(`Missing credentials - ID: ${!!clientId}, Secret: ${!!clientSecret}, URI: ${!!redirectUri}`);
+  }
+
+  const auth = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 
   const { tokens } = await auth.getToken(code);
   auth.setCredentials(tokens);
