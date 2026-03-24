@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const bodyParser = require('body-parser');
 const twilio = require('twilio');
@@ -5,7 +6,6 @@ const { getAuthUrl, saveToken, readEmails, sendEmail } = require('./gmail');
 const { shellExec, resolveApproval } = require('./tools');
 const { checkCalendar } = require('./calendar');
 const { manageCrm } = require('./crm');
-const { manageNotion } = require('./notion');
 const {
   MAX_TOOL_ITERATIONS,
   SYSTEM_PROMPT_SERVER,
@@ -25,6 +25,8 @@ validateEnv([
 const app = express();
 app.set('trust proxy', 1); // required for correct URL reconstruction behind ngrok/proxy
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── Rate limiter (per sender phone number) ───────────────────────────────────
 
@@ -135,25 +137,6 @@ const tools = [
     }
   },
   {
-    name: 'manage_notion',
-    description: 'Interact with Notion workspace. Log actions to operations log, create and update workflow tasks, log weekly performance metrics, create and search SOPs. Use this after every significant action to keep the Notion workspace updated.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: ['setup', 'log', 'create_task', 'update_task', 'log_performance', 'create_sop', 'search_sops', 'create_client_profile'],
-          description: 'The Notion action to perform'
-        },
-        params: {
-          type: 'object',
-          description: 'Parameters for the action. For log: {action, outcome, status, category, nextStep, apiCostImpact}. For create_task: {task, status, priority, owner, dueDate, notes}. For update_task: {pageId, status, notes}. For log_performance: {week, tasksCompleted, tasksFailed, verificationsent, verificationsApproved, capabilityGapsIdentified, capabilityGapsResolved, apiCallsMade, prospectsResearched, dealsCreated, notes, overallScore}. For create_sop: {title, category, content, version}. For search_sops: {query}. For create_client_profile: {name, summary, businessType, size, website, contactInfo, painPoints, fitScore, fitReason, researchNotes}'
-        }
-      },
-      required: ['action']
-    }
-  },
-  {
     name: 'shell_exec',
     description: 'Execute a shell command on the local machine with 6 security layers: (1) Hard blocklist permanently blocks destructive patterns (rm -rf, sudo rm, mkfs, dd if=, chmod 777, fork bomb, curl|bash, wget|sh). (2) Tier 2 commands (sudo, kill, pkill, npm install, pip install, crontab, chmod, chown, launchctl) require WhatsApp approval via Twilio before executing — approval times out after TWILIO_APPROVAL_TIMEOUT_MS (default 60s). (3) All processes are killed after 30 seconds. (4) Working directory is locked to /Users/nicholastsakonas/openclaw — cd outside this path is blocked. (5) Every execution is audit-logged to icarus-log.md with risk score 1-10, label (1-3=Low, 4-6=Medium, 7-8=High, 9-10=Critical), and factor breakdown; a WhatsApp alert fires for score >= 7. (6) stdout+stderr are capped at 2000 characters. NEVER use this to modify source files.',
     input_schema: {
@@ -172,7 +155,6 @@ async function executeTool(name, input) {
   if (name === 'send_email')     return await sendEmail(input.to, input.subject, input.body);
   if (name === 'check_calendar') return await checkCalendar(input.action, input.params || {});
   if (name === 'manage_crm')     return await manageCrm(input.action, input.params || {});
-  if (name === 'manage_notion')  return await manageNotion(input.action, input.params || {});
   if (name === 'shell_exec')     return await shellExec(input.command, input.reason || '');
   return `Unknown tool: ${name}`;
 }
@@ -225,6 +207,60 @@ app.get('/auth/callback', async (req, res) => {
     res.status(500).send('Auth failed: ' + error.message);
   }
 });
+
+// ─── Web chat endpoint ────────────────────────────────────────────────────────
+
+app.post('/chat', async (req, res) => {
+  const { message } = req.body;
+  if (!message || typeof message !== 'string' || !message.trim()) {
+    return res.status(400).json({ error: 'message is required.' });
+  }
+
+  let messages = loadMemory();
+  messages.push({ role: 'user', content: message.trim() });
+  messages = validateMessages(messages);
+
+  try {
+    let response = await createMessage(messages, { tools, systemPrompt: SYSTEM_PROMPT_SERVER });
+    let iterations = 0;
+
+    while (response.stop_reason === 'tool_use') {
+      if (++iterations > MAX_TOOL_ITERATIONS) {
+        console.error('[Icarus] Web chat: max tool iterations reached.');
+        break;
+      }
+
+      messages.push({ role: 'assistant', content: response.content });
+
+      const toolResults = await Promise.all(
+        response.content
+          .filter(b => b.type === 'tool_use')
+          .map(async (block) => ({
+            type: 'tool_result',
+            tool_use_id: block.id,
+            content: await executeTool(block.name, block.input),
+          }))
+      );
+
+      messages.push({ role: 'user', content: toolResults });
+      messages = validateMessages(messages);
+
+      response = await createMessage(messages, { tools, systemPrompt: SYSTEM_PROMPT_SERVER });
+    }
+
+    const reply = response.content.find(b => b.type === 'text')?.text || 'No response.';
+    messages.push({ role: 'assistant', content: reply });
+    await saveMemory(messages);
+
+    res.json({ reply });
+
+  } catch (error) {
+    console.error('[Icarus] Web chat error:', error.message);
+    res.status(500).json({ error: 'Icarus encountered an error. Try again.' });
+  }
+});
+
+// ─── WhatsApp webhook ─────────────────────────────────────────────────────────
 
 app.post('/whatsapp', validateTwilioSignature, async (req, res) => {
   const sender = req.body.From;

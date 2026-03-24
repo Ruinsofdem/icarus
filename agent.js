@@ -3,7 +3,6 @@ const { webSearch, readFile, writeFile, shellExec } = require('./tools');
 const { checkCalendar } = require('./calendar');
 const { manageCrm } = require('./crm');
 const { readEmails, sendEmail } = require('./gmail');
-const { manageNotion } = require('./notion');
 const { MAX_TOOL_ITERATIONS, validateEnv, validateMessages, loadMemory, saveMemory, createMessage } = require('./config');
 
 validateEnv(['BRAVE_API_KEY']);
@@ -126,25 +125,6 @@ const tools = [
       required: ['command', 'reason']
     }
   },
-  {
-    name: 'manage_notion',
-    description: 'Interact with Notion workspace. Log actions to operations log, create and update workflow tasks, log weekly performance metrics, create and search SOPs. Use this after every significant action to keep the Notion workspace updated.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        action: {
-          type: 'string',
-          enum: ['setup', 'log', 'create_task', 'update_task', 'log_performance', 'create_sop', 'search_sops', 'create_client_profile'],
-          description: 'The Notion action to perform'
-        },
-        params: {
-          type: 'object',
-          description: 'Parameters for the action. For log: {action, outcome, status, category, nextStep, apiCostImpact}. For create_task: {task, status, priority, owner, dueDate, notes}. For update_task: {pageId, status, notes}. For log_performance: {week, tasksCompleted, tasksFailed, verificationsent, verificationsApproved, capabilityGapsIdentified, capabilityGapsResolved, apiCallsMade, prospectsResearched, dealsCreated, notes, overallScore}. For create_sop: {title, category, content, version}. For search_sops: {query}. For create_client_profile: {name, summary, businessType, size, website, contactInfo, painPoints, fitScore, fitReason, researchNotes}'
-        }
-      },
-      required: ['action']
-    }
-  }
 ];
 
 async function executeTool(toolName, toolInput) {
@@ -158,7 +138,6 @@ async function executeTool(toolName, toolInput) {
     case 'read_emails':   return await readEmails(toolInput.max_results || 5);
     case 'send_email':    return await sendEmail(toolInput.to, toolInput.subject, toolInput.body);
     case 'shell_exec':    return await shellExec(toolInput.command, toolInput.reason || '');
-    case 'manage_notion': return await manageNotion(toolInput.action, toolInput.params || {});
     case 'check_auth_status': {
       const fs = require('fs');
       const lines = [];
@@ -166,7 +145,6 @@ async function executeTool(toolName, toolInput) {
       lines.push(`ANTHROPIC_API_KEY: ${process.env.ANTHROPIC_API_KEY ? '✅ Set' : '❌ Not set'}`);
       lines.push(`GOOGLE_CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID ? '✅ Set' : '❌ Not set'}`);
       lines.push(`GOOGLE_CLIENT_SECRET: ${process.env.GOOGLE_CLIENT_SECRET ? '✅ Set' : '❌ Not set'}`);
-      lines.push(`NOTION_TOKEN: ${process.env.NOTION_TOKEN ? '✅ Set' : '❌ Not set'}`);
       lines.push(`HUBSPOT_TOKEN: ${process.env.HUBSPOT_TOKEN ? '✅ Set' : '❌ Not set'}`);
       lines.push(`TWILIO_AUTH_TOKEN: ${process.env.TWILIO_AUTH_TOKEN ? '✅ Set' : '❌ Not set'}`);
       return lines.join('\n');
