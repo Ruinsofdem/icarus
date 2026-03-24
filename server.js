@@ -351,9 +351,11 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`⚡ Icarus WhatsApp server running on port ${PORT}`);
   const fs = require('fs');
-  if (!fs.existsSync('gmail_token.json')) {
-    console.warn('[Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.');
-  } else {
+  if (process.env.GMAIL_REFRESH_TOKEN) {
+    console.log('[Icarus] Gmail auth ready — using GMAIL_REFRESH_TOKEN env var.');
+  } else if (fs.existsSync('gmail_token.json')) {
     console.log('[Icarus] Gmail token found — Gmail/Calendar tools ready.');
+  } else {
+    console.warn('[Icarus] WARNING: No Gmail auth found (no GMAIL_REFRESH_TOKEN env var and no gmail_token.json). Visit /auth to authenticate.');
   }
 });
