@@ -348,7 +348,7 @@ app.post('/whatsapp', validateTwilioSignature, async (req, res) => {
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`⚡ Icarus WhatsApp server running on port ${PORT}`);
   const fs = require('fs');
   if (process.env.GMAIL_REFRESH_TOKEN) {
