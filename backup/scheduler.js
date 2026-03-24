@@ -3,7 +3,6 @@ const twilio = require('twilio');
 const { MAX_TOOL_ITERATIONS, validateEnv, loadMemory, saveMemory, createMessage } = require('./config');
 const { checkCalendar } = require('./calendar');
 const { manageCrm } = require('./crm');
-const { shellExec } = require('./tools');
 
 validateEnv(['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_NUMBER', 'MY_WHATSAPP_NUMBER']);
 
@@ -41,25 +40,12 @@ const briefingTools = [
       },
       required: ['action']
     }
-  },
-  {
-    name: 'shell_exec',
-    description: 'Execute a shell command on the local machine with full security guardrails. Working directory locked to /Users/nicholastsakonas/openclaw. Destructive patterns are hard-blocked. Sensitive commands (sudo, npm install, chmod, etc.) require WhatsApp approval. All executions are audit-logged to icarus-log.md. NEVER use this to modify source files.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        command: { type: 'string', description: 'The shell command to execute.' },
-        reason:  { type: 'string', description: 'Why this command is being run — used in audit logs and approval messages.' }
-      },
-      required: ['command', 'reason']
-    }
   }
 ];
 
 async function executeBriefingTool(name, input) {
   if (name === 'check_calendar') return await checkCalendar(input.action, input.params || {});
   if (name === 'manage_crm')     return await manageCrm(input.action, input.params || {});
-  if (name === 'shell_exec')     return await shellExec(input.command, input.reason || '');
   return `Unknown tool: ${name}`;
 }
 
@@ -153,14 +139,10 @@ async function sendBriefing(type) {
   }
 }
 
-if (require.main === module) {
-  // 6:00 AM AEST
-  cron.schedule('0 20 * * *', () => sendBriefing('morning'), { timezone: 'Australia/Sydney' });
+// 6:00 AM AEST
+cron.schedule('0 20 * * *', () => sendBriefing('morning'), { timezone: 'Australia/Sydney' });
 
-  // 11:59 PM AEST
-  cron.schedule('59 13 * * *', () => sendBriefing('evening'), { timezone: 'Australia/Sydney' });
+// 11:59 PM AEST
+cron.schedule('59 13 * * *', () => sendBriefing('evening'), { timezone: 'Australia/Sydney' });
 
-  console.log('⏰ Icarus scheduler running — briefings at 6:00 AM and 11:59 PM AEST');
-}
-
-module.exports = { sendBriefing };
+console.log('⏰ Icarus scheduler running — briefings at 6:00 AM and 11:59 PM AEST');

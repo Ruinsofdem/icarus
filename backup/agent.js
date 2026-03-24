@@ -1,5 +1,5 @@
 const readline = require('readline');
-const { webSearch, readFile, writeFile, shellExec } = require('./tools');
+const { webSearch, readFile, writeFile } = require('./tools');
 const { checkCalendar } = require('./calendar');
 const { manageCrm } = require('./crm');
 const { readEmails, sendEmail } = require('./gmail');
@@ -106,27 +106,6 @@ const tools = [
     }
   },
   {
-    name: 'check_auth_status',
-    description: 'Check whether Gmail OAuth is authenticated and other credentials are present. Use this to diagnose auth errors before attempting to send emails or read Gmail.',
-    input_schema: {
-      type: 'object',
-      properties: {},
-      required: []
-    }
-  },
-  {
-    name: 'shell_exec',
-    description: 'Execute a shell command on the local machine with 6 security layers: (1) Hard blocklist permanently blocks destructive patterns (rm -rf, sudo rm, mkfs, dd if=, chmod 777, fork bomb, curl|bash, wget|sh). (2) Tier 2 commands (sudo, kill, pkill, npm install, pip install, crontab, chmod, chown, launchctl) require WhatsApp approval via Twilio before executing — approval times out after 60s. (3) All processes are killed after 30 seconds. (4) Working directory is locked to /Users/nicholastsakonas/openclaw — cd outside this path is blocked. (5) Every execution is audit-logged to icarus-log.md with risk score 1-10, label (1-3=Low, 4-6=Medium, 7-8=High, 9-10=Critical), and factor breakdown; a WhatsApp alert fires for score >= 7. (6) stdout+stderr are capped at 2000 characters.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        command: { type: 'string', description: 'The shell command to execute.' },
-        reason:  { type: 'string', description: 'Why this command is being run — used in audit logs and approval messages.' }
-      },
-      required: ['command', 'reason']
-    }
-  },
-  {
     name: 'manage_notion',
     description: 'Interact with Notion workspace. Log actions to operations log, create and update workflow tasks, log weekly performance metrics, create and search SOPs. Use this after every significant action to keep the Notion workspace updated.',
     input_schema: {
@@ -157,20 +136,7 @@ async function executeTool(toolName, toolInput) {
     case 'manage_crm':    return await manageCrm(toolInput.action, toolInput.params || {});
     case 'read_emails':   return await readEmails(toolInput.max_results || 5);
     case 'send_email':    return await sendEmail(toolInput.to, toolInput.subject, toolInput.body);
-    case 'shell_exec':    return await shellExec(toolInput.command, toolInput.reason || '');
     case 'manage_notion': return await manageNotion(toolInput.action, toolInput.params || {});
-    case 'check_auth_status': {
-      const fs = require('fs');
-      const lines = [];
-      lines.push(`Gmail token (gmail_token.json): ${fs.existsSync('gmail_token.json') ? '✅ Present' : '❌ Missing — visit http://localhost:3000/auth to authenticate'}`);
-      lines.push(`ANTHROPIC_API_KEY: ${process.env.ANTHROPIC_API_KEY ? '✅ Set' : '❌ Not set'}`);
-      lines.push(`GOOGLE_CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID ? '✅ Set' : '❌ Not set'}`);
-      lines.push(`GOOGLE_CLIENT_SECRET: ${process.env.GOOGLE_CLIENT_SECRET ? '✅ Set' : '❌ Not set'}`);
-      lines.push(`NOTION_TOKEN: ${process.env.NOTION_TOKEN ? '✅ Set' : '❌ Not set'}`);
-      lines.push(`HUBSPOT_TOKEN: ${process.env.HUBSPOT_TOKEN ? '✅ Set' : '❌ Not set'}`);
-      lines.push(`TWILIO_AUTH_TOKEN: ${process.env.TWILIO_AUTH_TOKEN ? '✅ Set' : '❌ Not set'}`);
-      return lines.join('\n');
-    }
     default:              return `Unknown tool: ${toolName}`;
   }
 }

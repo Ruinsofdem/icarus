@@ -2,7 +2,6 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const twilio = require('twilio');
 const { getAuthUrl, saveToken, readEmails, sendEmail } = require('./gmail');
-const { shellExec, resolveApproval } = require('./tools');
 const { checkCalendar } = require('./calendar');
 const { manageCrm } = require('./crm');
 const { manageNotion } = require('./notion');
@@ -10,7 +9,6 @@ const {
   MAX_TOOL_ITERATIONS,
   SYSTEM_PROMPT_SERVER,
   validateEnv,
-  validateMessages,
   loadMemory,
   saveMemory,
   createMessage,
@@ -152,18 +150,6 @@ const tools = [
       },
       required: ['action']
     }
-  },
-  {
-    name: 'shell_exec',
-    description: 'Execute a shell command on the local machine with 6 security layers: (1) Hard blocklist permanently blocks destructive patterns (rm -rf, sudo rm, mkfs, dd if=, chmod 777, fork bomb, curl|bash, wget|sh). (2) Tier 2 commands (sudo, kill, pkill, npm install, pip install, crontab, chmod, chown, launchctl) require WhatsApp approval via Twilio before executing — approval times out after TWILIO_APPROVAL_TIMEOUT_MS (default 60s). (3) All processes are killed after 30 seconds. (4) Working directory is locked to /Users/nicholastsakonas/openclaw — cd outside this path is blocked. (5) Every execution is audit-logged to icarus-log.md with risk score 1-10, label (1-3=Low, 4-6=Medium, 7-8=High, 9-10=Critical), and factor breakdown; a WhatsApp alert fires for score >= 7. (6) stdout+stderr are capped at 2000 characters. NEVER use this to modify source files.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        command: { type: 'string', description: 'The shell command to execute.' },
-        reason:  { type: 'string', description: 'Why this command is being run — used in audit logs and approval messages.' }
-      },
-      required: ['command', 'reason']
-    }
   }
 ];
 
@@ -173,43 +159,12 @@ async function executeTool(name, input) {
   if (name === 'check_calendar') return await checkCalendar(input.action, input.params || {});
   if (name === 'manage_crm')     return await manageCrm(input.action, input.params || {});
   if (name === 'manage_notion')  return await manageNotion(input.action, input.params || {});
-  if (name === 'shell_exec')     return await shellExec(input.command, input.reason || '');
   return `Unknown tool: ${name}`;
 }
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
-
-app.get('/auth/status', (_req, res) => {
-  const fs = require('fs');
-  const tokenPath = 'gmail_token.json';
-  if (!fs.existsSync(tokenPath)) {
-    return res.json({ authenticated: false, message: 'No token found. Visit /auth to authenticate.' });
-  }
-  try {
-    const token = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
-    const hasAccess  = !!token.access_token;
-    const hasRefresh = !!token.refresh_token;
-    const expiry     = token.expiry_date ? new Date(token.expiry_date).toISOString() : 'unknown';
-    const expired    = token.expiry_date ? Date.now() > token.expiry_date : null;
-    const scopes     = (token.scope || '').split(' ').filter(Boolean);
-    const hasCalendar = scopes.some(s => s.includes('calendar'));
-    const hasGmail    = scopes.some(s => s.includes('gmail'));
-    return res.json({
-      authenticated: hasAccess || hasRefresh,
-      hasRefreshToken: hasRefresh,
-      expiry,
-      expired,
-      hasCalendarScope: hasCalendar,
-      hasGmailScope: hasGmail,
-      scopes,
-      action: (!hasCalendar || !hasGmail) ? 'Missing scopes — visit /auth to re-authenticate' : (expired ? 'Token expired — visit /auth to re-authenticate' : 'OK'),
-    });
-  } catch {
-    return res.json({ authenticated: false, message: 'Token file is corrupt. Visit /auth to re-authenticate.' });
-  }
-});
 
 app.get('/auth', async (_req, res) => {
   const url = await getAuthUrl();
@@ -235,37 +190,8 @@ app.post('/whatsapp', validateTwilioSignature, async (req, res) => {
     return;
   }
 
-  // ─── Approval intercept ────────────────────────────────────────────────────
-  const decision = incomingMsg.trim().toUpperCase();
-  if (decision === 'YES' || decision === 'NO') {
-    const fs = require('fs');
-    const path = require('path');
-    const APPROVALS_DIR = '/tmp/icarus_approvals';
-    try {
-      const files = fs.existsSync(APPROVALS_DIR)
-        ? fs.readdirSync(APPROVALS_DIR)
-            .map(f => ({ name: f, mtime: fs.statSync(path.join(APPROVALS_DIR, f)).mtimeMs }))
-            .filter(f => fs.readFileSync(path.join(APPROVALS_DIR, f.name), 'utf8').trim() === 'PENDING')
-            .sort((a, b) => b.mtime - a.mtime)
-        : [];
-
-      if (files.length > 0) {
-        resolveApproval(files[0].name, decision);
-        const replyText = decision === 'YES' ? '✅ Approved.' : '❌ Cancelled.';
-        res.type('text/xml').send(twimlResponse(replyText));
-        return;
-      }
-    } catch (err) {
-      console.error('[Icarus] Approval intercept error:', err.message);
-    }
-  }
-  // ──────────────────────────────────────────────────────────────────────────
-
-  let messages = loadMemory();
+  const messages = loadMemory();
   messages.push({ role: 'user', content: incomingMsg });
-
-  // Strip orphaned tool_use/tool_result blocks before the first API call
-  messages = validateMessages(messages);
 
   try {
     let response = await createMessage(messages, { tools, systemPrompt: SYSTEM_PROMPT_SERVER });
@@ -290,10 +216,6 @@ app.post('/whatsapp', validateTwilioSignature, async (req, res) => {
       );
 
       messages.push({ role: 'user', content: toolResults });
-
-      // Validate after each tool round to prevent accumulated orphans
-      messages = validateMessages(messages);
-
       response = await createMessage(messages, { tools, systemPrompt: SYSTEM_PROMPT_SERVER });
     }
 
@@ -314,10 +236,4 @@ app.post('/whatsapp', validateTwilioSignature, async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`⚡ Icarus WhatsApp server running on port ${PORT}`);
-  const fs = require('fs');
-  if (!fs.existsSync('gmail_token.json')) {
-    console.warn('[Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.');
-  } else {
-    console.log('[Icarus] Gmail token found — Gmail/Calendar tools ready.');
-  }
 });

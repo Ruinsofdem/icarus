@@ -1,0 +1,40 @@
+2026-03-22T19:39:52: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-22T20:06:36: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-22T20:13:19: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-22T20:20:18: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-22T20:32:39: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-22T20:42:16: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T00:10:51: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T00:20:38: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T00:20:38: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T00:28:54: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T00:28:54: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T00:30:58: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T00:30:58: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T00:35:49: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T00:35:49: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T00:47:15: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T00:47:15: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T00:47:55: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T00:47:55: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T00:50:17: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T00:50:17: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T01:22:23: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T01:22:23: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T01:22:40: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T01:22:40: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T01:25:54: Building auth URL with: {
+2026-03-23T01:25:54:   clientId: 'YES',
+2026-03-23T01:25:54:   clientSecret: 'YES',
+2026-03-23T01:25:54:   redirectUri: 'http://localhost:3000/auth/callback'
+2026-03-23T01:25:54: }
+2026-03-23T01:29:11: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T01:29:11: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T01:40:43: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T01:40:43: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T01:41:53: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T01:41:53: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T11:29:34: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T11:29:34: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.
+2026-03-23T11:46:14: ⚡ Icarus WhatsApp server running on port 3000
+2026-03-23T11:46:14: [Icarus] WARNING: gmail_token.json not found — Gmail/Calendar tools will fail until authenticated. Visit http://localhost:3000/auth to authenticate.

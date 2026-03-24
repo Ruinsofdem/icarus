@@ -10,11 +10,7 @@ function getAuthClient() {
     process.env.GOOGLE_REDIRECT_URI
   );
 
-  if (process.env.GMAIL_REFRESH_TOKEN) {
-    auth.setCredentials({
-      refresh_token: process.env.GMAIL_REFRESH_TOKEN
-    });
-  } else if (fs.existsSync(TOKEN_FILE)) {
+  if (fs.existsSync(TOKEN_FILE)) {
     const token = JSON.parse(fs.readFileSync(TOKEN_FILE, 'utf8'));
     auth.setCredentials(token);
   }
@@ -23,6 +19,12 @@ function getAuthClient() {
 }
 
 async function getAuthUrl() {
+  console.log('Building auth URL with:', {
+    clientId: process.env.GOOGLE_CLIENT_ID ? 'YES' : 'NO',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'YES' : 'NO',
+    redirectUri: process.env.GOOGLE_REDIRECT_URI
+  });
+
   const auth = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
@@ -31,9 +33,11 @@ async function getAuthUrl() {
 
   return auth.generateAuthUrl({
     access_type: 'offline',
+    prompt: 'consent', // force refresh_token to be returned on re-auth
     scope: [
       'https://www.googleapis.com/auth/gmail.readonly',
-      'https://www.googleapis.com/auth/gmail.send'
+      'https://www.googleapis.com/auth/gmail.send',
+      'https://www.googleapis.com/auth/calendar',
     ]
   });
 }
