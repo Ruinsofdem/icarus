@@ -2,3 +2,9 @@
 node_modules
 memory.json
 gmail_token.json
+.claude/
+.claire/
+logs/
+*.log
+.dashboard-sessions.json
+icarus-log.md

@@ -6,6 +6,7 @@ const { getAuthUrl, saveToken, readEmails, sendEmail } = require('./gmail');
 const { shellExec, resolveApproval } = require('./tools');
 const { checkCalendar } = require('./calendar');
 const { manageCrm } = require('./crm');
+const gpiRoutes = require('./gpi-nsw/routes');
 const {
   MAX_TOOL_ITERATIONS,
   SYSTEM_PROMPT_SERVER,
@@ -22,11 +23,48 @@ validateEnv([
   'MY_WHATSAPP_NUMBER',
 ]);
 
+// ─── Module imports ───────────────────────────────────────────────────────────
+
+// Batch A
+const visionModule   = require('./modules/vision/index');
+const briefingModule = require('./modules/briefing/index');
+const browserModule  = require('./modules/browser/index');
+
+// Batch B
+const stripeModule  = require('./modules/stripe');
+const voiceModule   = require('./modules/voice');
+const marketsModule = require('./modules/markets');
+
+// Batch C
+const memoryModule    = require('./modules/memory');
+const knowledgeModule = require('./modules/knowledge');
+const anomalyModule   = require('./modules/anomaly');
+const decisionsModule = require('./modules/decisions');
+const selflogModule   = require('./modules/selflog');
+
+// Batch D
+const orchestrator = require('./modules/orchestrator');
+const outreach     = require('./modules/outreach');
+const brainSync    = require('./modules/brain-sync');
+
+// Batch E
+const dashboardV2      = require('./modules/dashboard-v2');
+const whatsappCommands = require('./modules/whatsapp-commands');
+
 const app = express();
 app.set('trust proxy', 1); // required for correct URL reconstruction behind ngrok/proxy
+
+// Stripe webhook MUST be mounted before express.json (needs raw body)
+app.use('/stripe', stripeModule.init());
+
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/api/gpi', gpiRoutes);
+
+// Batch B routes
+app.use('/voice',   voiceModule.init());
+app.use('/markets', marketsModule.init());
 
 // ─── Rate limiter (per sender phone number) ───────────────────────────────────
 
@@ -73,7 +111,16 @@ function twimlResponse(text) {
 
 // ─── Tools ────────────────────────────────────────────────────────────────────
 
+// ─── Batch A tool aggregation ─────────────────────────────────────────────────
+
+const MODULE_A_TOOLS = [
+  ...visionModule.tools,
+  ...briefingModule.tools,
+  ...browserModule.tools,
+];
+
 const tools = [
+  ...MODULE_A_TOOLS,
   {
     name: 'read_emails',
     description: 'Read unread emails from the Icarus Gmail inbox.',
@@ -151,6 +198,11 @@ const tools = [
 ];
 
 async function executeTool(name, input) {
+  // Route Batch A module tools
+  if (visionModule.tools.some((t) => t.name === name))   return await visionModule.handler(name, input);
+  if (briefingModule.tools.some((t) => t.name === name)) return await briefingModule.handler(name, input);
+  if (browserModule.tools.some((t) => t.name === name))  return await browserModule.handler(name, input);
+
   if (name === 'read_emails')    return await readEmails(input.max_results || 5);
   if (name === 'send_email')     return await sendEmail(input.to, input.subject, input.body);
   if (name === 'check_calendar') return await checkCalendar(input.action, input.params || {});
@@ -199,12 +251,22 @@ app.get('/auth', async (_req, res) => {
 });
 
 app.get('/auth/callback', async (req, res) => {
+  if (req.query.error) {
+    console.error('Auth denied by user:', req.query.error);
+    return res.status(400).send(`Auth denied: ${req.query.error}. Go back and try /auth again.`);
+  }
+  if (!req.query.code) {
+    return res.status(400).send('No auth code received. Visit /auth to start the flow.');
+  }
   try {
-    await saveToken(req.query.code);
-    res.send('Icarus Gmail + Calendar access granted. You can close this tab.');
+    const tokens = await saveToken(req.query.code);
+    const hasCalendar = (tokens.scope || '').includes('calendar');
+    const hasGmail = (tokens.scope || '').includes('gmail');
+    console.log('[Icarus] Auth success — Gmail:', hasGmail, '| Calendar:', hasCalendar);
+    res.send(`✅ Icarus auth complete.<br>Gmail: ${hasGmail ? '✅' : '❌'}<br>Calendar: ${hasCalendar ? '✅' : '❌'}<br>You can close this tab.`);
   } catch (error) {
     console.error('Auth callback error:', error.message);
-    res.status(500).send('Auth failed: ' + error.message);
+    res.status(500).send('Auth failed: ' + error.message + '<br>Try visiting /auth again.');
   }
 });
 
@@ -270,6 +332,18 @@ app.post('/whatsapp', validateTwilioSignature, async (req, res) => {
     res.type('text/xml').send(twimlResponse('Slow down — rate limit reached. Try again in a minute.'));
     return;
   }
+
+  // ─── WhatsApp command parser ───────────────────────────────────────────────
+  try {
+    const cmdReply = await whatsappCommands.handler(incomingMsg);
+    if (cmdReply !== null) {
+      res.type('text/xml').send(twimlResponse(cmdReply));
+      return;
+    }
+  } catch (err) {
+    console.error('[Icarus] Command parser error:', err.message);
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   // ─── Approval intercept ────────────────────────────────────────────────────
   const decision = incomingMsg.trim().toUpperCase();
@@ -345,10 +419,48 @@ app.post('/whatsapp', validateTwilioSignature, async (req, res) => {
   }
 });
 
+// ─── Module init ──────────────────────────────────────────────────────────────
+
+// Batch A
+visionModule.init(app);
+briefingModule.init(app);
+browserModule.init(app);
+
+// Batch C — modules register routes onto a shared router
+const batchCRouter = express.Router();
+memoryModule.init();
+knowledgeModule.init();
+anomalyModule.init();
+decisionsModule.init();
+selflogModule.init();
+memoryModule.handler(batchCRouter);
+knowledgeModule.handler(batchCRouter);
+anomalyModule.handler(batchCRouter);
+decisionsModule.handler(batchCRouter);
+selflogModule.handler(batchCRouter);
+app.use(batchCRouter);
+
+// Batch D
+orchestrator.init();
+outreach.init();
+brainSync.init();
+orchestrator.handler(app);
+outreach.handler(app);
+brainSync.handler(app);
+
+// Batch E (httpServer created below at Start)
+whatsappCommands.init();
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 
+const http = require('http');
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
+const httpServer = http.createServer(app);
+
+// Dashboard v2 uses socket.io — pass the http server
+dashboardV2.init(app, httpServer);
+
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`⚡ Icarus WhatsApp server running on port ${PORT}`);
   const fs = require('fs');
   if (process.env.GMAIL_REFRESH_TOKEN) {

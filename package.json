@@ -3,11 +3,23 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "gpi": "node gpi-server.js",
+    "test": "jest --testEnvironment=node --forceExit --detectOpenHandles"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 15000,
+    "testMatch": [
+      "**/modules/**/*.test.js",
+      "**/tests/**/*.test.js"
+    ]
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
     "@hubspot/api-client": "^11.0.0",
+    "@pinecone-database/pinecone": "^7.1.0",
+    "airtable": "^0.12.2",
     "axios": "^1.6.0",
     "body-parser": "^1.20.0",
     "cheerio": "^1.0.0",
@@ -15,6 +27,14 @@
     "express": "^4.18.0",
     "googleapis": "^171.4.0",
     "node-cron": "^3.0.0",
+    "openai": "^4.104.0",
+    "playwright": "^1.59.1",
+    "socket.io": "^4.8.3",
+    "stripe": "^14.25.0",
     "twilio": "^4.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.2.2"
   }
 }

@@ -1,10 +1,12 @@
 'use strict';
 require('dotenv').config();
 
+const http       = require('http');
 const express    = require('express');
 const { execSync } = require('child_process');
 const fs         = require('fs');
 const path       = require('path');
+const dashV2     = require('./modules/dashboard-v2');
 
 const PORT     = parseInt(process.env.DASHBOARD_PORT) || 4000;
 const WORK_DIR = path.resolve(__dirname);
@@ -468,6 +470,12 @@ app.get('/', (_req, res) => {
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-app.listen(PORT, () => {
+// ─── Dashboard v2 (socket.io live panels) ────────────────────────────────────
+
+const httpServer = http.createServer(app);
+dashV2.init(app, httpServer);
+
+httpServer.listen(PORT, () => {
   console.log(`⚡ Icarus Dashboard running on port ${PORT}`);
+  console.log(`⚡ Dashboard v2 available at http://localhost:${PORT}/v2`);
 });

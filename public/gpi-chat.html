@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPI NSW — Agent Chat</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:     #0b0d14;
+  --s1:     #12151f;
+  --s2:     #181c2a;
+  --s3:     #1f2436;
+  --b1:     #252a3d;
+  --b2:     #303858;
+  --tx:     #dde4f5;
+  --tx2:    #8494b8;
+  --tx3:    #4d5878;
+  --amber:  #f59e0b;
+  --teal:   #2dd4bf;
+  --purple: #a78bfa;
+  --red:    #f87171;
+  --green:  #34d399;
+  --blue:   #60a5fa;
+  --r:      10px;
+  --rs:     6px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--tx);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+header {
+  background: var(--s1);
+  border-bottom: 1px solid var(--b1);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.logo {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--teal), var(--purple));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 14px; color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.header-title { font-weight: 700; font-size: 15px; }
+.header-sub { font-size: 11px; color: var(--tx2); }
+
+.agent-badge {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--tx2);
+  background: var(--s3);
+  border: 1px solid var(--b2);
+  border-radius: 20px;
+  padding: 4px 12px;
+}
+
+.dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+}
+
+/* ── Chat area ───────────────────────────────────────────────────── */
+#chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-behavior: smooth;
+}
+
+#chat::-webkit-scrollbar { width: 4px; }
+#chat::-webkit-scrollbar-track { background: transparent; }
+#chat::-webkit-scrollbar-thumb { background: var(--b2); border-radius: 4px; }
+
+/* ── Messages ────────────────────────────────────────────────────── */
+.msg {
+  display: flex;
+  gap: 10px;
+  max-width: 780px;
+  animation: fadeUp 0.2s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+.avatar {
+  width: 32px; height: 32px; border-radius: 8px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+}
+
+.msg.user .avatar { background: var(--purple); color: #fff; }
+.msg.assistant .avatar {
+  background: linear-gradient(135deg, var(--teal), var(--blue));
+  color: #fff;
+}
+
+.bubble {
+  padding: 12px 16px;
+  border-radius: var(--r);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg.user .bubble {
+  background: var(--purple);
+  color: #fff;
+  border-bottom-right-radius: 3px;
+}
+
+.msg.assistant .bubble {
+  background: var(--s2);
+  border: 1px solid var(--b1);
+  color: var(--tx);
+  border-bottom-left-radius: 3px;
+}
+
+.msg-meta {
+  font-size: 10px;
+  color: var(--tx3);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.tag-quote     { background: rgba(245,158,11,.15); color: var(--amber); }
+.tag-followup  { background: rgba(167,139,250,.15); color: var(--purple); }
+.tag-email     { background: rgba(96,165,250,.15);  color: var(--blue); }
+.tag-pipeline  { background: rgba(52,211,153,.15);  color: var(--green); }
+.tag-compliance{ background: rgba(45,212,191,.15);  color: var(--teal); }
+.tag-unknown   { background: rgba(255,255,255,.08); color: var(--tx2); }
+
+/* ── Typing indicator ────────────────────────────────────────────── */
+.typing .bubble {
+  display: flex; align-items: center; gap: 5px;
+  padding: 14px 18px;
+}
+
+.typing .dot-pulse {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--tx2);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.typing .dot-pulse:nth-child(2) { animation-delay: 0.2s; }
+.typing .dot-pulse:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40%           { opacity: 1;   transform: scale(1); }
+}
+
+/* ── Quick prompts ───────────────────────────────────────────────── */
+#quick-prompts {
+  padding: 0 24px 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.qp {
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--b2);
+  background: var(--s2);
+  color: var(--tx2);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.qp:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: rgba(45,212,191,.08);
+}
+
+/* ── Input bar ───────────────────────────────────────────────────── */
+#input-area {
+  background: var(--s1);
+  border-top: 1px solid var(--b1);
+  padding: 16px 24px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+#msg-input {
+  flex: 1;
+  background: var(--s3);
+  border: 1px solid var(--b2);
+  border-radius: var(--r);
+  color: var(--tx);
+  font-size: 14px;
+  font-family: inherit;
+  padding: 10px 14px;
+  resize: none;
+  line-height: 1.5;
+  min-height: 42px;
+  max-height: 160px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+#msg-input:focus { border-color: var(--teal); }
+#msg-input::placeholder { color: var(--tx3); }
+
+#send-btn {
+  background: var(--teal);
+  color: #0b0d14;
+  border: none;
+  border-radius: var(--rs);
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+#send-btn:hover { opacity: 0.85; }
+#send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Raw JSON panel ──────────────────────────────────────────────── */
+.raw-toggle {
+  font-size: 10px;
+  color: var(--tx3);
+  cursor: pointer;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  margin-top: 4px;
+}
+.raw-toggle:hover { color: var(--tx2); }
+
+.raw-block {
+  display: none;
+  margin-top: 8px;
+  background: var(--s3);
+  border: 1px solid var(--b1);
+  border-radius: var(--rs);
+  padding: 10px 12px;
+  font-family: 'SF Mono','Fira Code','Consolas', monospace;
+  font-size: 11px;
+  color: var(--tx2);
+  white-space: pre;
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.raw-block.open { display: block; }
+
+/* ── Empty state ─────────────────────────────────────────────────── */
+#empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--tx2);
+  padding: 40px;
+  text-align: center;
+}
+
+#empty .big-icon {
+  font-size: 40px;
+  opacity: 0.4;
+}
+
+#empty h2 { font-size: 18px; font-weight: 700; color: var(--tx); }
+#empty p  { font-size: 13px; max-width: 340px; }
+
+.agent-list {
+  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+  margin-top: 8px;
+}
+
+.agent-chip {
+  font-size: 11px; font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--b2);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">GPI</div>
+  <div>
+    <div class="header-title">GPI NSW Agent Chat</div>
+    <div class="header-sub">Quoting · Follow-up · Email · Pipeline · Compliance</div>
+  </div>
+  <div class="agent-badge">
+    <span class="dot"></span>
+    5 agents online
+  </div>
+</header>
+
+<div id="chat">
+  <div id="empty">
+    <div class="big-icon">💬</div>
+    <h2>Ask me anything about GPI NSW</h2>
+    <p>I'll automatically route your request to the right agent — quoting, follow-up, email triage, pipeline, or compliance.</p>
+    <div class="agent-list">
+      <span class="agent-chip tag-quote">Quoting</span>
+      <span class="agent-chip tag-followup">Follow-up</span>
+      <span class="agent-chip tag-email">Email</span>
+      <span class="agent-chip tag-pipeline">Pipeline</span>
+      <span class="agent-chip tag-compliance">Compliance</span>
+    </div>
+  </div>
+</div>
+
+<div id="quick-prompts">
+  <button class="qp" onclick="sendQuick(this)">Generate a quote for 200sqm office repaint in Sydney</button>
+  <button class="qp" onclick="sendQuick(this)">Start follow-up sequence for quote GPI-20260330-001, client Jane Smith, $8,500</button>
+  <button class="qp" onclick="sendQuick(this)">Classify email from james@builderco.com.au: "Hi, can you quote a warehouse repaint?"</button>
+  <button class="qp" onclick="sendQuick(this)">Check compliance for Marco Pellegrini — licence expires 2026-12-01, insurance expires 2026-11-15</button>
+  <button class="qp" onclick="sendQuick(this)">Generate weekly pipeline report</button>
+</div>
+
+<div id="input-area">
+  <textarea id="msg-input" placeholder="Ask anything — quote a job, check a subcontractor, classify an email…" rows="1"></textarea>
+  <button id="send-btn" onclick="sendMessage()">Send</button>
+</div>
+
+<script>
+const chatEl   = document.getElementById('chat');
+const inputEl  = document.getElementById('msg-input');
+const sendBtn  = document.getElementById('send-btn');
+const emptyEl  = document.getElementById('empty');
+
+// Conversation history for context
+const history = [];
+
+// Auto-resize textarea
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+});
+
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+function sendQuick(btn) {
+  inputEl.value = btn.textContent.trim();
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+  sendMessage();
+}
+
+function hideEmpty() {
+  if (emptyEl) emptyEl.style.display = 'none';
+}
+
+function appendMessage(role, text, agent, raw) {
+  hideEmpty();
+
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${role}`;
+
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.textContent = role === 'user' ? 'You' : 'AI';
+
+  const inner = document.createElement('div');
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = text;
+  inner.appendChild(bubble);
+
+  if (role === 'assistant') {
+    const meta = document.createElement('div');
+    meta.className = 'msg-meta';
+
+    const time = document.createElement('span');
+    time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    meta.appendChild(time);
+
+    if (agent && agent !== 'unknown') {
+      const tag = document.createElement('span');
+      tag.className = `agent-tag tag-${agent}`;
+      tag.textContent = agent;
+      meta.appendChild(tag);
+    }
+
+    inner.appendChild(meta);
+
+    if (raw) {
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'raw-toggle';
+      toggleBtn.textContent = 'Show raw JSON';
+      const rawBlock = document.createElement('pre');
+      rawBlock.className = 'raw-block';
+      rawBlock.textContent = JSON.stringify(raw, null, 2);
+
+      toggleBtn.onclick = () => {
+        rawBlock.classList.toggle('open');
+        toggleBtn.textContent = rawBlock.classList.contains('open') ? 'Hide raw JSON' : 'Show raw JSON';
+      };
+
+      inner.appendChild(toggleBtn);
+      inner.appendChild(rawBlock);
+    }
+  }
+
+  wrap.appendChild(av);
+  wrap.appendChild(inner);
+  chatEl.appendChild(wrap);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  return wrap;
+}
+
+function appendTyping() {
+  hideEmpty();
+  const wrap = document.createElement('div');
+  wrap.className = 'msg assistant typing';
+
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.textContent = 'AI';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  ['','',''].forEach(() => {
+    const d = document.createElement('div');
+    d.className = 'dot-pulse';
+    bubble.appendChild(d);
+  });
+
+  wrap.appendChild(av);
+  wrap.appendChild(bubble);
+  chatEl.appendChild(wrap);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  return wrap;
+}
+
+async function sendMessage() {
+  const text = inputEl.value.trim();
+  if (!text || sendBtn.disabled) return;
+
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  sendBtn.disabled = true;
+
+  appendMessage('user', text);
+  history.push({ role: 'user', content: text });
+
+  const typingEl = appendTyping();
+
+  try {
+    const res = await fetch('/api/gpi/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, history: history.slice(-10) }),
+    });
+
+    const data = await res.json();
+    typingEl.remove();
+
+    const reply = data.reply || data.error || 'No response received.';
+    appendMessage('assistant', reply, data.agent, data.raw);
+    history.push({ role: 'assistant', content: reply });
+
+  } catch (err) {
+    typingEl.remove();
+    appendMessage('assistant', `Error: ${err.message}`, 'unknown', null);
+  }
+
+  sendBtn.disabled = false;
+  inputEl.focus();
+}
+</script>
+</body>
+</html>

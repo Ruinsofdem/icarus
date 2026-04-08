@@ -5,536 +5,347 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Anthropic Usage Dashboard</title>
 <style>
-/* ── Reset & Variables ─────────────────────────────────────────────── */
+/* ── Reset & Tokens ──────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:         #0b0d14;
-  --surface:    #13161f;
-  --surface2:   #1a1e2e;
-  --surface3:   #222742;
-  --border:     #252a3d;
-  --border2:    #303659;
-  --text:       #e2e8f5;
-  --text2:      #8b95b0;
-  --text3:      #555f7a;
-  --accent:     #5b6af5;
-  --green:      #2dd4a0;
-  --red:        #f56565;
-  --red-bg:     rgba(245,101,101,0.12);
-  --orange:     #f6a94a;
-  --haiku:      #1ad3e8;
-  --sonnet:     #a78bfa;
-  --opus:       #fb923c;
-  --other:      #64748b;
-  --r:          10px;
-  --r-sm:       6px;
+  --bg:       #0b0d14;
+  --s1:       #12151f;
+  --s2:       #181c2a;
+  --s3:       #1f2436;
+  --b1:       #252a3d;
+  --b2:       #303858;
+  --tx:       #dde4f5;
+  --tx2:      #8494b8;
+  --tx3:      #4d5878;
+  --amber:    #f59e0b;
+  --teal:     #2dd4bf;
+  --purple:   #a78bfa;
+  --red:      #f87171;
+  --red-bg:   rgba(248,113,113,.1);
+  --green:    #34d399;
+  --r:        10px;
+  --rs:       6px;
 }
 
 body {
   background: var(--bg);
-  color: var(--text);
+  color: var(--tx);
   font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
   font-size: 13px;
   line-height: 1.55;
   min-height: 100vh;
 }
 
-/* ── Typography helpers ────────────────────────────────────────────── */
-.label {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: .6px;
+/* ── Utilities ───────────────────────────────────────────────────── */
+.lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
   text-transform: uppercase;
-  color: var(--text2);
+  color: var(--tx2);
 }
-.mono {
-  font-family: 'SF Mono','Fira Code','Consolas',monospace;
-  font-variant-numeric: tabular-nums;
-}
+.mono { font-family: 'SF Mono','Fira Code','Consolas',monospace; font-variant-numeric: tabular-nums; }
+.hide { display: none !important; }
 
-/* ── Layout ────────────────────────────────────────────────────────── */
-#wrap { max-width: 1320px; margin: 0 auto; padding: 0 24px 56px; }
+/* ── Wrapper ─────────────────────────────────────────────────────── */
+#wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px 56px; }
 
-/* ── Alert Banner ──────────────────────────────────────────────────── */
+/* ── Alert banner ────────────────────────────────────────────────── */
 #alert {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: flex; align-items: flex-start; gap: 12px;
   background: var(--red-bg);
   border: 1px solid var(--red);
   border-radius: var(--r);
-  padding: 12px 18px;
+  padding: 14px 18px;
   margin: 20px 0 0;
   color: #fca5a5;
-  font-weight: 500;
   font-size: 13px;
-  animation: fadeIn .25s ease;
+  animation: slideDown .22s ease;
 }
-#alert svg { flex-shrink: 0; }
-#alert.hide { display: none; }
+#alert svg { flex-shrink: 0; margin-top: 1px; }
+#alert-body { line-height: 1.7; }
+#alert-body strong { color: #fff; font-weight: 600; }
 
-/* ── Topbar ────────────────────────────────────────────────────────── */
+/* ── Header ──────────────────────────────────────────────────────── */
 .topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
   padding: 22px 0 18px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--b1);
   margin-bottom: 24px;
 }
-.topbar-left h1 {
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -.4px;
-  color: var(--text);
+.topbar h1 { font-size: 19px; font-weight: 700; letter-spacing: -.4px; }
+.topbar p  { color: var(--tx2); font-size: 12px; margin-top: 3px; }
+#file-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--s2); border: 1px solid var(--b2);
+  border-radius: 20px; padding: 6px 14px;
+  font-size: 12px; color: var(--tx2);
 }
-.topbar-left p { color: var(--text2); font-size: 12px; margin-top: 3px; }
-.topbar-right { display: flex; align-items: center; gap: 12px; }
-#ts { font-size: 11.5px; color: var(--text3); }
-.btn {
-  border: 1px solid var(--border2);
-  border-radius: var(--r-sm);
-  padding: 7px 15px;
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background .15s, border-color .15s;
-  color: var(--text);
-  background: var(--surface2);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.btn:hover:not(:disabled) { background: var(--surface3); border-color: var(--border2); }
-.btn:disabled { opacity: .45; cursor: not-allowed; }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn-primary:hover:not(:disabled) { background: #4a5ae8; border-color: #4a5ae8; }
+#file-pill svg { color: var(--teal); }
+#file-name { color: var(--tx); font-weight: 500; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ── Controls bar ──────────────────────────────────────────────────── */
-.controls {
-  background: var(--surface);
-  border: 1px solid var(--border);
+/* ── Drop zone ───────────────────────────────────────────────────── */
+#drop-zone {
+  border: 2px dashed var(--b2);
   border-radius: var(--r);
-  padding: 18px 22px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 16px;
-  margin-bottom: 22px;
+  padding: 52px 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .18s, background .18s;
+  margin-bottom: 24px;
+  background: var(--s1);
 }
-.ctrl-group { display: flex; flex-direction: column; gap: 5px; }
-.ctrl-group .label { margin-bottom: 1px; }
-.ctrl-group input {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  color: var(--text);
-  padding: 8px 12px;
-  font-size: 13px;
-  outline: none;
-  transition: border-color .15s;
-  height: 36px;
+#drop-zone:hover, #drop-zone.over {
+  border-color: var(--teal);
+  background: rgba(45,212,191,.04);
 }
-.ctrl-group input:focus { border-color: var(--accent); }
-#key-input { width: 300px; font-family: 'SF Mono','Fira Code',monospace; letter-spacing: .5px; }
-input[type="date"] { width: 148px; color-scheme: dark; }
-#err-msg { color: var(--red); font-size: 12px; width: 100%; display: none; }
+#drop-zone.over { border-style: solid; }
+.drop-icon {
+  width: 48px; height: 48px;
+  background: var(--s2); border: 1px solid var(--b2);
+  border-radius: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-bottom: 14px;
+  color: var(--tx2);
+}
+#drop-zone h2 { font-size: 15px; font-weight: 600; color: var(--tx); margin-bottom: 6px; }
+#drop-zone p  { font-size: 12.5px; color: var(--tx3); }
+#drop-zone p span { color: var(--teal); cursor: pointer; }
+#file-input { display: none; }
 
-/* ── Stat row ──────────────────────────────────────────────────────── */
+/* ── Stats ───────────────────────────────────────────────────────── */
 .stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin-bottom: 18px;
 }
-@media (max-width: 860px) { .stats { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 800px) { .stats { grid-template-columns: 1fr 1fr; } }
 .stat {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 18px 20px 16px;
+  background: var(--s1); border: 1px solid var(--b1);
+  border-radius: var(--r); padding: 18px 20px 16px;
 }
-.stat .label { margin-bottom: 10px; }
-.stat .val {
-  font-size: 29px;
-  font-weight: 700;
-  letter-spacing: -.7px;
-  line-height: 1;
-  color: var(--text);
-}
-.stat .sub { font-size: 11px; color: var(--text3); margin-top: 7px; }
-.badge {
-  display: inline-block;
-  background: var(--red);
-  color: #fff;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .5px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  vertical-align: middle;
-  margin-left: 7px;
-  text-transform: uppercase;
-}
+.stat .lbl { margin-bottom: 10px; }
+.stat .val  { font-size: 28px; font-weight: 700; letter-spacing: -.6px; line-height: 1; color: var(--tx); }
+.stat .sub  { font-size: 11px; color: var(--tx3); margin-top: 7px; }
 
-/* ── Chart grid ────────────────────────────────────────────────────── */
+/* ── Chart row ───────────────────────────────────────────────────── */
 .chart-row {
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: 360px 1fr;
   gap: 14px;
   margin-bottom: 18px;
 }
 @media (max-width: 900px) { .chart-row { grid-template-columns: 1fr; } }
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 20px 22px;
+  background: var(--s1); border: 1px solid var(--b1);
+  border-radius: var(--r); padding: 20px 22px;
 }
 .card-title {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text);
+  font-size: 13.5px; font-weight: 600; color: var(--tx);
   margin-bottom: 18px;
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
+  display: flex; align-items: baseline; gap: 8px;
 }
-.card-title span { font-size: 11px; font-weight: 400; color: var(--text3); }
-.empty { color: var(--text3); font-size: 12.5px; text-align: center; padding: 40px 0; }
+.card-title .sub { font-size: 11px; font-weight: 400; color: var(--tx3); }
+.empty { color: var(--tx3); font-size: 12.5px; text-align: center; padding: 36px 0; }
 
-/* ── Model bars ────────────────────────────────────────────────────── */
+/* Model bars */
 .model-list { display: flex; flex-direction: column; gap: 16px; }
 .model-item { display: flex; flex-direction: column; gap: 6px; }
 .model-head { display: flex; justify-content: space-between; align-items: center; }
-.model-name-wrap { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 500; }
-.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.model-toks { font-size: 11.5px; color: var(--text2); }
-.bar-bg { background: var(--surface2); border-radius: 3px; height: 7px; overflow: hidden; }
-.bar-fg { height: 100%; border-radius: 3px; transition: width .6s cubic-bezier(.4,0,.2,1); }
-.model-meta { font-size: 11px; color: var(--text3); }
+.model-lbl  { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 500; }
+.dot        { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.model-tok  { font-size: 11.5px; color: var(--tx2); }
+.bar-bg     { background: var(--s3); border-radius: 3px; height: 8px; overflow: hidden; }
+.bar-fg     { height: 100%; border-radius: 3px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+.model-meta { font-size: 11px; color: var(--tx3); }
 
-/* ── SVG chart ─────────────────────────────────────────────────────── */
-#svg-wrap { position: relative; }
-#chart-svg { display: block; width: 100%; overflow: visible; }
-.no-data { display: none; }
-.no-data.show { display: block; }
+/* SVG timeline */
+#tl-svg     { display: block; width: 100%; overflow: visible; }
+.axis-label { fill: var(--tx3); font-size: 10px; font-family: system-ui,sans-serif; }
+.grid-line  { stroke: var(--b1); stroke-width: 1; }
+.area-path  { fill: var(--teal); opacity: .08; }
+.line-path  { fill: none; stroke: var(--teal); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 
-/* tooltip */
+/* Tooltip */
 #tip {
-  position: fixed;
-  background: var(--surface3);
-  border: 1px solid var(--border2);
-  border-radius: var(--r-sm);
-  padding: 9px 13px;
-  font-size: 12px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity .12s;
-  z-index: 999;
-  white-space: nowrap;
-  line-height: 1.7;
+  position: fixed; z-index: 999;
+  background: var(--s3); border: 1px solid var(--b2);
+  border-radius: var(--rs); padding: 9px 13px;
+  font-size: 12px; line-height: 1.65;
+  pointer-events: none; opacity: 0;
+  transition: opacity .12s; white-space: nowrap;
 }
 #tip.on { opacity: 1; }
-#tip .tip-head { color: var(--text2); font-size: 11px; }
-#tip .tip-val { color: var(--text); font-weight: 600; }
-#tip .tip-warn { color: var(--red); font-size: 11px; }
+.tip-h { color: var(--tx2); font-size: 11px; }
+.tip-v { color: var(--tx); font-weight: 600; }
+.tip-w { color: var(--red); font-size: 11px; }
 
-/* ── Spend row ─────────────────────────────────────────────────────── */
-.spend-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  overflow: hidden;
-  margin-bottom: 18px;
-}
-.spend-cell {
-  padding: 18px 22px;
-  border-right: 1px solid var(--border);
-}
-.spend-cell:last-child { border-right: none; }
-.spend-model { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
-.spend-amt {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -.5px;
-  color: var(--text);
-  line-height: 1;
-}
-.spend-rates { font-size: 11px; color: var(--text3); margin-top: 5px; }
-
-/* ── Table ─────────────────────────────────────────────────────────── */
+/* ── Table ───────────────────────────────────────────────────────── */
 .tbl-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  overflow: hidden;
-  margin-bottom: 20px;
+  background: var(--s1); border: 1px solid var(--b1);
+  border-radius: var(--r); overflow: hidden; margin-bottom: 20px;
 }
-.tbl-header {
-  padding: 15px 22px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.tbl-hdr {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--b1);
+  display: flex; justify-content: space-between; align-items: center;
 }
-.tbl-header .card-title { margin-bottom: 0; }
-#row-count { font-size: 11.5px; color: var(--text3); }
-.tbl-scroll { overflow-x: auto; max-height: 400px; overflow-y: auto; }
+.tbl-hdr .card-title { margin: 0; }
+#tbl-count { font-size: 11.5px; color: var(--tx3); }
+.tbl-wrap  { overflow-x: auto; max-height: 420px; overflow-y: auto; }
 table { width: 100%; border-collapse: collapse; }
 thead th {
   position: sticky; top: 0;
-  background: var(--surface);
-  padding: 10px 18px;
+  background: var(--s1);
+  padding: 9px 16px;
   text-align: left;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: .6px;
-  text-transform: uppercase;
-  color: var(--text2);
-  border-bottom: 1px solid var(--border);
+  font-size: 10px; font-weight: 700; letter-spacing: .7px;
+  text-transform: uppercase; color: var(--tx2);
+  border-bottom: 1px solid var(--b1);
   white-space: nowrap;
 }
-tbody tr { border-bottom: 1px solid var(--border); }
+tbody tr { border-bottom: 1px solid var(--b1); }
 tbody tr:last-child { border-bottom: none; }
-tbody tr:hover { background: var(--surface2); }
-tbody td { padding: 10px 18px; font-size: 12.5px; color: var(--text); white-space: nowrap; }
+tbody tr:hover { background: var(--s2); }
+tbody td { padding: 9px 16px; font-size: 12.5px; color: var(--tx); white-space: nowrap; }
 .tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 9px;
-  font-size: 11.5px;
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--s2); border: 1px solid var(--b1);
+  border-radius: 4px; padding: 2px 8px; font-size: 11.5px;
 }
-.cost-val { color: var(--green); }
-.tbl-empty { text-align: center; color: var(--text3); padding: 44px; }
+.cost-cell { color: var(--green); }
+.tbl-empty { text-align: center; color: var(--tx3); padding: 44px; }
 
-/* ── Debug ─────────────────────────────────────────────────────────── */
-.debug {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  overflow: hidden;
-  font-size: 12px;
+@keyframes slideDown {
+  from { opacity:0; transform:translateY(-6px); }
+  to   { opacity:1; transform:none; }
 }
-.debug summary {
-  padding: 12px 18px;
-  cursor: pointer;
-  color: var(--text2);
-  user-select: none;
-}
-.debug summary:hover { color: var(--text); }
-.debug pre {
-  background: var(--bg);
-  border-top: 1px solid var(--border);
-  padding: 16px 18px;
-  font-family: 'SF Mono','Fira Code',monospace;
-  font-size: 11px;
-  color: var(--text3);
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-/* ── Loading veil ──────────────────────────────────────────────────── */
-#veil {
-  position: fixed; inset: 0;
-  background: rgba(11,13,20,.75);
-  backdrop-filter: blur(3px);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 500;
-}
-#veil.hide { display: none; }
-.veil-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 28px 36px;
-  text-align: center;
-  color: var(--text2);
-  font-size: 13px;
-}
-.spin {
-  display: block;
-  width: 28px; height: 28px;
-  border: 2.5px solid var(--border2);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin .65s linear infinite;
-  margin: 0 auto 14px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 </style>
 </head>
 <body>
 
-<!-- Loading veil -->
-<div id="veil" class="hide">
-  <div class="veil-box">
-    <span class="spin"></span>
-    Fetching usage data…
-  </div>
-</div>
-
-<!-- Tooltip -->
 <div id="tip">
-  <div class="tip-head" id="tip-head"></div>
-  <div class="tip-val"  id="tip-val"></div>
-  <div class="tip-warn" id="tip-warn"></div>
+  <div class="tip-h" id="tip-h"></div>
+  <div class="tip-v" id="tip-v"></div>
+  <div class="tip-w" id="tip-w"></div>
 </div>
 
 <div id="wrap">
 
   <!-- Alert -->
   <div id="alert" class="hide">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f56565" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+         stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
     </svg>
-    <span id="alert-text"></span>
+    <div id="alert-body"></div>
   </div>
 
-  <!-- Topbar -->
+  <!-- Header -->
   <div class="topbar">
-    <div class="topbar-left">
-      <h1>Anthropic API Dashboard</h1>
-      <p>Organization usage &amp; spend monitor</p>
+    <div>
+      <h1>Anthropic Usage Dashboard</h1>
+      <p>Drop your usage CSV to analyse token consumption &amp; cost</p>
     </div>
-    <div class="topbar-right">
-      <span id="ts"></span>
-      <button class="btn" id="refresh-btn" onclick="load()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
-        </svg>
-        Refresh
-      </button>
-    </div>
-  </div>
-
-  <!-- Controls -->
-  <div class="controls">
-    <div class="ctrl-group">
-      <div class="label">Admin API Key</div>
-      <input type="password" id="key-input" placeholder="sk-ant-admin…" autocomplete="off" spellcheck="false">
-    </div>
-    <div class="ctrl-group">
-      <div class="label">From</div>
-      <input type="date" id="d-start">
-    </div>
-    <div class="ctrl-group">
-      <div class="label">To</div>
-      <input type="date" id="d-end">
-    </div>
-    <button class="btn btn-primary" onclick="load()">Load Data</button>
-    <div id="err-msg"></div>
-  </div>
-
-  <!-- Stats -->
-  <div class="stats">
-    <div class="stat">
-      <div class="label">Tokens Today</div>
-      <div class="val" id="s-today">—</div>
-      <div class="sub" id="s-today-sub">—</div>
-    </div>
-    <div class="stat">
-      <div class="label">Period Tokens</div>
-      <div class="val" id="s-total">—</div>
-      <div class="sub" id="s-total-sub">—</div>
-    </div>
-    <div class="stat">
-      <div class="label">Total Requests</div>
-      <div class="val" id="s-reqs">—</div>
-      <div class="sub" id="s-reqs-sub">selected period</div>
-    </div>
-    <div class="stat">
-      <div class="label">Est. Total Spend</div>
-      <div class="val" id="s-spend">—</div>
-      <div class="sub" id="s-spend-sub">selected period</div>
+    <div id="file-pill" class="hide">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      <span id="file-name"></span>
+      <span style="color:var(--tx3)">·</span>
+      <span id="file-rows" style="color:var(--tx3)"></span>
     </div>
   </div>
 
-  <!-- Charts -->
-  <div class="chart-row">
+  <!-- Drop zone -->
+  <div id="drop-zone">
+    <div class="drop-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="16 16 12 12 8 16"/>
+        <line x1="12" y1="12" x2="12" y2="21"/>
+        <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/>
+      </svg>
+    </div>
+    <h2>Drop your Anthropic usage CSV here</h2>
+    <p>Drag &amp; drop the file, or <span onclick="document.getElementById('file-input').click()">browse to select</span></p>
+    <input type="file" id="file-input" accept=".csv,text/csv">
+  </div>
 
-    <!-- Model breakdown -->
+  <!-- Stats (hidden until data loaded) -->
+  <div class="stats" id="stats-row" style="display:none">
+    <div class="stat">
+      <div class="lbl">Total Input Tokens</div>
+      <div class="val" id="s-in">—</div>
+      <div class="sub" id="s-in-sub"></div>
+    </div>
+    <div class="stat">
+      <div class="lbl">Total Output Tokens</div>
+      <div class="val" id="s-out">—</div>
+      <div class="sub" id="s-out-sub"></div>
+    </div>
+    <div class="stat">
+      <div class="lbl">Total Tokens</div>
+      <div class="val" id="s-tot">—</div>
+      <div class="sub" id="s-tot-sub"></div>
+    </div>
+    <div class="stat">
+      <div class="lbl">Est. Total Cost</div>
+      <div class="val" id="s-cost">—</div>
+      <div class="sub">AUD · input + output</div>
+    </div>
+  </div>
+
+  <!-- Charts (hidden until data loaded) -->
+  <div class="chart-row" id="chart-row" style="display:none">
     <div class="card">
-      <div class="card-title">Usage by Model <span>period total</span></div>
-      <div id="model-chart"><div class="empty">No data yet</div></div>
+      <div class="card-title">Token Usage by Model</div>
+      <div id="model-chart"><div class="empty">No data</div></div>
     </div>
-
-    <!-- Hourly timeline -->
     <div class="card">
-      <div class="card-title" id="tl-title">Token Timeline <span id="tl-sub">—</span></div>
-      <div id="svg-wrap">
-        <div class="empty no-data" id="svg-empty">No data yet</div>
-        <svg id="chart-svg" style="display:none"></svg>
+      <div class="card-title">
+        Daily Token Timeline
+        <span class="sub" id="tl-range"></span>
       </div>
-    </div>
-
-  </div>
-
-  <!-- Spend breakdown -->
-  <div class="spend-row">
-    <div class="spend-cell">
-      <div class="spend-model label">
-        <span class="dot" style="background:var(--haiku)"></span>Haiku
+      <div id="tl-wrap">
+        <div class="empty" id="tl-empty">No data</div>
+        <svg id="tl-svg" style="display:none"></svg>
       </div>
-      <div class="spend-amt" id="sp-haiku">—</div>
-      <div class="spend-rates">$0.80 input · $4.00 output per 1M tokens</div>
-    </div>
-    <div class="spend-cell">
-      <div class="spend-model label">
-        <span class="dot" style="background:var(--sonnet)"></span>Sonnet
-      </div>
-      <div class="spend-amt" id="sp-sonnet">—</div>
-      <div class="spend-rates">$3.00 input · $15.00 output per 1M tokens</div>
-    </div>
-    <div class="spend-cell">
-      <div class="spend-model label">
-        <span class="dot" style="background:var(--opus)"></span>Opus
-      </div>
-      <div class="spend-amt" id="sp-opus">—</div>
-      <div class="spend-rates">$15.00 input · $75.00 output per 1M tokens</div>
     </div>
   </div>
 
-  <!-- Table -->
-  <div class="tbl-card">
-    <div class="tbl-header">
-      <div class="card-title" style="margin:0">Raw Records <span style="font-size:11px;font-weight:400;color:var(--text3)">newest first</span></div>
-      <span id="row-count"></span>
+  <!-- Table (hidden until data loaded) -->
+  <div class="tbl-card" id="tbl-card" style="display:none">
+    <div class="tbl-hdr">
+      <div class="card-title" style="margin:0">
+        All Records
+        <span class="sub">newest first</span>
+      </div>
+      <span id="tbl-count"></span>
     </div>
-    <div class="tbl-scroll">
+    <div class="tbl-wrap">
       <table>
         <thead>
           <tr>
-            <th>Time / Date</th>
+            <th>Date</th>
             <th>Model</th>
-            <th>Input Tokens</th>
-            <th>Output Tokens</th>
-            <th>Requests</th>
-            <th>Est. Cost</th>
+            <th>Input</th>
+            <th>Output</th>
+            <th>Cache Create</th>
+            <th>Cache Read</th>
+            <th>Total</th>
+            <th>Est. Cost AUD</th>
           </tr>
         </thead>
-        <tbody id="tbl-body">
-          <tr><td colspan="6" class="tbl-empty">Enter your Admin API key and click Load Data</td></tr>
-        </tbody>
+        <tbody id="tbl-body"></tbody>
       </table>
     </div>
   </div>
-
-  <!-- Debug -->
-  <details class="debug">
-    <summary>Raw API response (debug)</summary>
-    <pre id="raw">No data fetched yet.</pre>
-  </details>
 
 </div><!-- /wrap -->
 
@@ -542,490 +353,482 @@ tbody td { padding: 10px 18px; font-size: 12.5px; color: var(--text); white-spac
 /* ────────────────────────────────────────────────────────────────────
    CONFIG
 ──────────────────────────────────────────────────────────────────── */
-const API      = 'http://localhost:8010/proxy/v1/organizations/usage_report/messages';
-const LS_KEY   = 'ant_admin_key';
-const REFRESH  = 60_000;
-const WARN_DAY = 200_000;
-const WARN_HR  = 50_000;
+const USD_AUD   = 1 / 0.63;   // 1 USD = ~1.587 AUD
+const DAY_LIMIT = 200_000;
 
-const RATES = {
-  haiku:  { in: 0.80,  out: 4.00  },
+const RATES = {                // USD per 1M tokens
+  haiku:  { in: 0.80,  out:  4.00 },
   sonnet: { in: 3.00,  out: 15.00 },
   opus:   { in: 15.00, out: 75.00 },
+  def:    { in: 3.00,  out: 15.00 },
 };
 
-const COLORS = {
-  haiku:  'var(--haiku)',
-  sonnet: 'var(--sonnet)',
-  opus:   'var(--opus)',
-  other:  'var(--other)',
+const MODEL_COLOR = {
+  haiku:  'var(--amber)',
+  sonnet: 'var(--teal)',
+  opus:   'var(--purple)',
+  def:    'var(--tx2)',
 };
 
 /* ────────────────────────────────────────────────────────────────────
    HELPERS
 ──────────────────────────────────────────────────────────────────── */
-const $ = id => document.getElementById(id);
+const $   = id => document.getElementById(id);
+const esc = s  => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 function fmtN(n) {
   if (n == null) return '—';
-  if (n >= 1e9) return (n/1e9).toFixed(2)+'B';
-  if (n >= 1e6) return (n/1e6).toFixed(2)+'M';
-  if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
-  return n.toLocaleString();
+  if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return Math.round(n).toLocaleString();
 }
-function fmtFull(n) { return (n||0).toLocaleString(); }
-function fmtUSD(n)  { return '$'+(n||0).toFixed((n||0)>=100?2:(n||0)>=10?2:4); }
-function esc(s)     { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtFull(n) { return Math.round(n||0).toLocaleString(); }
+function fmtAUD(n)  { return 'A$' + (n||0).toFixed(2); }
 
-function todayStr() { return new Date().toISOString().slice(0,10); }
-function nDaysAgo(n) {
-  const d = new Date();
-  d.setDate(d.getDate()-n);
-  return d.toISOString().slice(0,10);
-}
-
-function family(model) {
-  const m = (model||'').toLowerCase();
-  if (m.includes('haiku'))  return 'haiku';
-  if (m.includes('sonnet')) return 'sonnet';
-  if (m.includes('opus'))   return 'opus';
-  return 'other';
+function modelFamily(name) {
+  const n = (name||'').toLowerCase();
+  if (n.includes('haiku'))  return 'haiku';
+  if (n.includes('sonnet')) return 'sonnet';
+  if (n.includes('opus'))   return 'opus';
+  return 'def';
 }
 
-function shortModel(model) {
-  if (!model) return 'Unknown';
-  // e.g. "claude-3-5-sonnet-20241022" → "claude-3-5-sonnet"
-  return model.replace(/-\d{8}$/, '').replace(/^claude-/,'Claude ');
+function rowCostAUD(row) {
+  const r = RATES[row.fam];
+  return (((row.input / 1e6) * r.in) + ((row.output / 1e6) * r.out)) * USD_AUD;
 }
 
-function itemCost(item) {
-  const r = RATES[family(item.model)] || {in:0,out:0};
-  return ((item.input_tokens||0)/1e6)*r.in + ((item.output_tokens||0)/1e6)*r.out;
-}
-
-function getTS(item) {
-  return item.timestamp || item.created_at || item.start_time || item.date || null;
+function niceMax(v) {
+  if (!v) return 1000;
+  const e = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const m of [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10])
+    if (m * e >= v) return m * e;
+  return 10 * e;
 }
 
 /* ────────────────────────────────────────────────────────────────────
-   API
+   CSV PARSER
 ──────────────────────────────────────────────────────────────────── */
-async function fetchPage(key, start, end, groups, cursor) {
-  const p = new URLSearchParams({ start_date: start, end_date: end });
-  (groups||['model']).forEach(g => p.append('group_by[]', g));
-  if (cursor) p.set('page_token', cursor);
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
 
-  const r = await fetch(`${API}?${p}`, {
-    headers: {
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'usage-reports-2024-11-08',
-    }
-  });
-
-  if (!r.ok) {
-    let msg;
-    try { const j = await r.json(); msg = j?.error?.message || j?.message; } catch {}
-    throw new Error(msg || `HTTP ${r.status} ${r.statusText}`);
-  }
-  return r.json();
-}
-
-async function fetchAll(key, start, end, groups) {
-  const items = [];
-  let cursor = null, first = null;
-  do {
-    const d = await fetchPage(key, start, end, groups, cursor);
-    if (!first) first = d;
-    const page = d.data || d.results || d.usage || (Array.isArray(d) ? d : []);
-    items.push(...page);
-    cursor = d.next_page_token || d.next_cursor || null;
-  } while (cursor);
-  return { items, raw: first };
-}
-
-/* ────────────────────────────────────────────────────────────────────
-   PROCESSING
-──────────────────────────────────────────────────────────────────── */
-function processItems(items) {
-  const today = todayStr();
-  const modelMap = {};   // model → {family,in,out,count}
-  const dayMap   = {};   // YYYY-MM-DD → {in,out}
-  const hourMap  = {};   // 0-23 → {in,out}  (today only)
-  let todayIn=0, todayOut=0, todayReqs=0;
-  let totalIn=0, totalOut=0, totalReqs=0;
-
-  items.forEach(item => {
-    const fam  = family(item.model);
-    const inT  = item.input_tokens  || 0;
-    const outT = item.output_tokens || 0;
-    const reqs = item.request_count || item.count || 1;
-
-    // model aggregate
-    if (!modelMap[item.model]) modelMap[item.model] = { model: item.model, fam, in:0, out:0, count:0 };
-    modelMap[item.model].in    += inT;
-    modelMap[item.model].out   += outT;
-    modelMap[item.model].count += reqs;
-
-    totalIn   += inT;
-    totalOut  += outT;
-    totalReqs += reqs;
-
-    // time bucketing
-    const ts = getTS(item);
-    if (ts) {
-      const dt     = new Date(ts);
-      const dateS  = dt.toISOString().slice(0,10);
-      const hourN  = dt.getUTCHours();
-
-      if (!dayMap[dateS]) dayMap[dateS] = {in:0, out:0};
-      dayMap[dateS].in  += inT;
-      dayMap[dateS].out += outT;
-
-      if (dateS === today) {
-        todayIn   += inT;
-        todayOut  += outT;
-        todayReqs += reqs;
-        if (!hourMap[hourN]) hourMap[hourN] = {in:0, out:0};
-        hourMap[hourN].in  += inT;
-        hourMap[hourN].out += outT;
+  function splitLine(line) {
+    const fields = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') {
+        if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+        else { inQ = !inQ; }
+        continue;
       }
-    } else if (item.date === today) {
-      todayIn   += inT;
-      todayOut  += outT;
-      todayReqs += reqs;
+      if (c === ',' && !inQ) { fields.push(cur.trim()); cur = ''; continue; }
+      cur += c;
     }
-  });
-
-  // If timestamp-based today aggregation missed (no timestamps), fall back to dayMap
-  if (todayIn === 0 && dayMap[today]) {
-    todayIn  = dayMap[today].in;
-    todayOut = dayMap[today].out;
+    fields.push(cur.trim());
+    return fields;
   }
 
-  // Build sorted arrays
-  const models = Object.values(modelMap).sort((a,b) => (b.in+b.out)-(a.in+a.out));
-  const days   = Object.entries(dayMap).sort((a,b) => a[0].localeCompare(b[0]));
-  const hours  = Array.from({length:24},(_,h) => ({
-    h, in: hourMap[h]?.in||0, out: hourMap[h]?.out||0
-  }));
+  // Normalise header names to snake_case lowercase
+  const headers = splitLine(lines[0]).map(h =>
+    h.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+  );
 
-  // Spend per family
-  const spend = { haiku:0, sonnet:0, opus:0 };
-  models.forEach(m => {
-    const r = RATES[m.fam];
-    if (r) spend[m.fam] += (m.in/1e6)*r.in + (m.out/1e6)*r.out;
-  });
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const vals = splitLine(line);
+    const obj  = {};
+    headers.forEach((h, j) => { obj[h] = vals[j] ?? ''; });
+    rows.push(obj);
+  }
+  return { headers, rows };
+}
 
-  const hasHourly = hours.some(h => h.in+h.out > 0);
-  const hasDays   = days.length > 0;
-
-  return { models, days, hours, hasHourly, hasDays,
-           todayIn, todayOut, todayReqs,
-           totalIn, totalOut, totalReqs, spend };
+function toNum(s) {
+  return parseFloat(String(s || '').replace(/,/g, '')) || 0;
 }
 
 /* ────────────────────────────────────────────────────────────────────
-   RENDER STATS
+   BUILD TYPED ROWS
 ──────────────────────────────────────────────────────────────────── */
-function renderStats(p) {
-  const todayTot  = p.todayIn  + p.todayOut;
-  const periodTot = p.totalIn  + p.totalOut;
-  const totalSpend = p.spend.haiku + p.spend.sonnet + p.spend.opus;
-
-  const todayEl = $('s-today');
-  todayEl.textContent = fmtN(todayTot);
-  if (todayTot > WARN_DAY) todayEl.insertAdjacentHTML('beforeend','<span class="badge">ALERT</span>');
-  $('s-today-sub').textContent = `${fmtN(p.todayIn)} in / ${fmtN(p.todayOut)} out`;
-
-  $('s-total').textContent    = fmtN(periodTot);
-  $('s-total-sub').textContent = `${fmtN(p.totalIn)} in / ${fmtN(p.totalOut)} out`;
-
-  $('s-reqs').textContent = fmtN(p.totalReqs);
-
-  $('s-spend').textContent     = fmtUSD(totalSpend);
-  $('s-spend-sub').textContent = `haiku ${fmtUSD(p.spend.haiku)} · sonnet ${fmtUSD(p.spend.sonnet)} · opus ${fmtUSD(p.spend.opus)}`;
-
-  // alert banner
-  const banner = $('alert');
-  if (todayTot > WARN_DAY) {
-    $('alert-text').textContent = `Today's token usage is ${fmtFull(todayTot)} — exceeds the 200,000 threshold.`;
-    banner.classList.remove('hide');
-  } else {
-    banner.classList.add('hide');
-  }
-
-  // spend cells
-  $('sp-haiku').textContent  = fmtUSD(p.spend.haiku);
-  $('sp-sonnet').textContent = fmtUSD(p.spend.sonnet);
-  $('sp-opus').textContent   = fmtUSD(p.spend.opus);
+function buildRows(rawRows) {
+  return rawRows.map(r => {
+    // Accept various column name spellings
+    const date         = r.date || '';
+    const input        = toNum(r.input_tokens        || r.input  || 0);
+    const output       = toNum(r.output_tokens       || r.output || 0);
+    const cache_create = toNum(r.cache_creation_tokens || r.cache_creation || r.cache_create || 0);
+    const cache_read   = toNum(r.cache_read_tokens   || r.cache_read || 0);
+    const model        = r.model || 'unknown';
+    const fam          = modelFamily(model);
+    return { date, input, output, cache_create, cache_read, model, fam };
+  }).filter(r => r.date);
 }
 
 /* ────────────────────────────────────────────────────────────────────
-   RENDER MODEL BARS
+   AGGREGATE
 ──────────────────────────────────────────────────────────────────── */
-function renderModelBars(p) {
+function aggregate(rows) {
+  let totalIn = 0, totalOut = 0, totalCC = 0, totalCR = 0, totalCostAUD = 0;
+
+  const modelMap = {};
+  const dayMap   = {};
+
+  rows.forEach(r => {
+    totalIn       += r.input;
+    totalOut      += r.output;
+    totalCC       += r.cache_create;
+    totalCR       += r.cache_read;
+    totalCostAUD  += rowCostAUD(r);
+
+    // Per-model
+    if (!modelMap[r.model])
+      modelMap[r.model] = { model: r.model, fam: r.fam, input: 0, output: 0, count: 0 };
+    modelMap[r.model].input  += r.input;
+    modelMap[r.model].output += r.output;
+    modelMap[r.model].count++;
+
+    // Per-day (total = all 4 token types for the alert / chart)
+    if (!dayMap[r.date])
+      dayMap[r.date] = { input: 0, output: 0, cache_create: 0, cache_read: 0 };
+    dayMap[r.date].input        += r.input;
+    dayMap[r.date].output       += r.output;
+    dayMap[r.date].cache_create += r.cache_create;
+    dayMap[r.date].cache_read   += r.cache_read;
+  });
+
+  const models = Object.values(modelMap)
+    .sort((a, b) => (b.input + b.output) - (a.input + a.output));
+
+  const days = Object.entries(dayMap)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, d]) => ({
+      date,
+      input:        d.input,
+      output:       d.output,
+      cache_create: d.cache_create,
+      cache_read:   d.cache_read,
+      total:        d.input + d.output + d.cache_create + d.cache_read,
+    }));
+
+  return { totalIn, totalOut, totalCC, totalCR, totalCostAUD, models, days };
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   RENDER: STATS
+──────────────────────────────────────────────────────────────────── */
+function renderStats(agg) {
+  const allTok = agg.totalIn + agg.totalOut + agg.totalCC + agg.totalCR;
+
+  $('s-in').textContent      = fmtN(agg.totalIn);
+  $('s-in-sub').textContent  = fmtFull(agg.totalIn) + ' tokens';
+
+  $('s-out').textContent     = fmtN(agg.totalOut);
+  $('s-out-sub').textContent = fmtFull(agg.totalOut) + ' tokens';
+
+  $('s-tot').textContent     = fmtN(allTok);
+  $('s-tot-sub').textContent =
+    `+${fmtN(agg.totalCC)} cache create · ${fmtN(agg.totalCR)} cache read`;
+
+  $('s-cost').textContent    = fmtAUD(agg.totalCostAUD);
+
+  $('stats-row').style.display = '';
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   RENDER: ALERT BANNER
+──────────────────────────────────────────────────────────────────── */
+function renderAlert(days) {
+  const over = days
+    .filter(d => d.total > DAY_LIMIT)
+    .sort((a, b) => b.total - a.total);
+
+  const alertEl = $('alert');
+  if (!over.length) { alertEl.classList.add('hide'); return; }
+
+  const dateLines = over
+    .map(d => `<strong>${esc(d.date)}</strong>: ${fmtFull(d.total)} tokens`)
+    .join(' &nbsp;·&nbsp; ');
+
+  $('alert-body').innerHTML =
+    `<strong>${over.length} day${over.length > 1 ? 's' : ''} exceeded 200,000 tokens</strong><br>${dateLines}`;
+  alertEl.classList.remove('hide');
+}
+
+/* ────────────────────────────────────────────────────────────────────
+   RENDER: MODEL BARS
+──────────────────────────────────────────────────────────────────── */
+function renderModelBars(models) {
   const el = $('model-chart');
-  if (!p.models.length) { el.innerHTML = '<div class="empty">No model data</div>'; return; }
+  if (!models.length) { el.innerHTML = '<div class="empty">No model data</div>'; return; }
 
-  const maxTok = Math.max(...p.models.map(m => m.in+m.out), 1);
+  const maxTok = Math.max(...models.map(m => m.input + m.output), 1);
 
-  el.innerHTML = `<div class="model-list">${p.models.map(m => {
-    const tot  = m.in + m.out;
-    const pct  = (tot/maxTok*100).toFixed(1);
-    const col  = COLORS[m.fam];
-    const r    = RATES[m.fam] || {in:0,out:0};
-    const cost = (m.in/1e6)*r.in + (m.out/1e6)*r.out;
+  el.innerHTML = `<div class="model-list">${models.map(m => {
+    const tot  = m.input + m.output;
+    const pct  = (tot / maxTok * 100).toFixed(1);
+    const col  = MODEL_COLOR[m.fam];
+    const r    = RATES[m.fam];
+    const cost = (((m.input / 1e6) * r.in) + ((m.output / 1e6) * r.out)) * USD_AUD;
+
     return `<div class="model-item">
       <div class="model-head">
-        <div class="model-name-wrap"><span class="dot" style="background:${col}"></span>${esc(shortModel(m.model))}</div>
-        <div class="model-toks">${fmtN(tot)}</div>
+        <div class="model-lbl">
+          <span class="dot" style="background:${col}"></span>
+          ${esc(m.model)}
+        </div>
+        <div class="model-tok">${fmtN(tot)}</div>
       </div>
-      <div class="bar-bg"><div class="bar-fg" style="width:${pct}%;background:${col}"></div></div>
-      <div class="model-meta">${fmtFull(m.in)} in · ${fmtFull(m.out)} out · ${fmtFull(m.count)} req · ~${fmtUSD(cost)}</div>
+      <div class="bar-bg">
+        <div class="bar-fg" style="width:${pct}%;background:${col}"></div>
+      </div>
+      <div class="model-meta">
+        ${fmtFull(m.input)} in &nbsp;·&nbsp; ${fmtFull(m.output)} out
+        &nbsp;·&nbsp; ${m.count.toLocaleString()} row${m.count !== 1 ? 's' : ''}
+        &nbsp;·&nbsp; ~${fmtAUD(cost)}
+      </div>
     </div>`;
   }).join('')}</div>`;
 }
 
 /* ────────────────────────────────────────────────────────────────────
-   RENDER SVG TIMELINE
+   RENDER: SVG DAILY TIMELINE
 ──────────────────────────────────────────────────────────────────── */
-function renderTimeline(p) {
-  const emptyEl = $('svg-empty');
-  const svgEl   = $('chart-svg');
-  const subEl   = $('tl-sub');
+function renderTimeline(days) {
+  const emptyEl = $('tl-empty');
+  const svgEl   = $('tl-svg');
 
-  // Decide which series to plot
-  let series, isHourly;
-  if (p.hasHourly) {
-    series   = p.hours.map(h => ({ label: `${String(h.h).padStart(2,'0')}:00`, v: h.in+h.out, in: h.in, out: h.out }));
-    isHourly = true;
-    subEl.textContent = 'hourly · today';
-  } else if (p.hasDays) {
-    series   = p.days.map(([d,v]) => ({ label: d.slice(5), v: v.in+v.out, in: v.in, out: v.out }));
-    isHourly = false;
-    subEl.textContent = 'daily';
-  } else {
-    emptyEl.classList.add('show');
-    svgEl.style.display = 'none';
-    emptyEl.textContent = 'No timeline data available';
+  if (!days.length) {
+    emptyEl.style.display = 'block';
+    svgEl.style.display   = 'none';
     return;
   }
+  emptyEl.style.display = 'none';
+  svgEl.style.display   = 'block';
 
-  if (!series.some(s => s.v > 0)) {
-    emptyEl.classList.add('show');
-    svgEl.style.display = 'none';
-    emptyEl.textContent = 'No token usage in this period';
-    return;
-  }
+  if (days.length >= 2)
+    $('tl-range').textContent = days[0].date + ' → ' + days[days.length-1].date;
+  else
+    $('tl-range').textContent = days[0].date;
 
-  emptyEl.classList.remove('show');
-  svgEl.style.display = 'block';
+  const VW  = 640, VH = 210;
+  const PAD = { t: 12, r: 24, b: 42, l: 60 };
+  const CW  = VW - PAD.l - PAD.r;
+  const CH  = VH - PAD.t - PAD.b;
 
-  drawSVG(svgEl, series, isHourly);
-}
+  const n    = days.length;
+  const maxV = niceMax(Math.max(...days.map(d => d.total), DAY_LIMIT * 0.9 + 1));
 
-function drawSVG(svg, series, isHourly) {
-  const VW = 680, VH = 210;
-  const PAD = { t:14, r:16, b:38, l:58 };
-  const CW = VW - PAD.l - PAD.r;
-  const CH = VH - PAD.t - PAD.b;
+  const xp = i => PAD.l + (n > 1 ? (i / (n - 1)) * CW : CW / 2);
+  const yp = v => PAD.t + CH - (v / maxV) * CH;
 
-  svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
-
-  const maxV = Math.max(...series.map(s => s.v), 1);
-  const n    = series.length;
-
-  const xp = i  => PAD.l + (n > 1 ? (i/(n-1))*CW : CW/2);
-  const yp = v  => PAD.t + CH - (v/maxV)*CH;
-
-  // Grid + y-labels (5 lines)
+  // Y grid (5 lines)
   let grid = '', yLabels = '';
-  for (let i=0; i<=4; i++) {
-    const v = (maxV/4)*i;
+  for (let i = 0; i <= 4; i++) {
+    const v = (maxV / 4) * i;
     const y = yp(v);
-    grid    += `<line x1="${PAD.l}" y1="${y}" x2="${VW-PAD.r}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;
-    yLabels += `<text x="${PAD.l-8}" y="${y+4}" text-anchor="end" fill="var(--text3)" font-size="10" font-family="sans-serif">${fmtN(v)}</text>`;
+    grid    += `<line class="grid-line" x1="${PAD.l}" y1="${y.toFixed(1)}" x2="${VW - PAD.r}" y2="${y.toFixed(1)}"/>`;
+    yLabels += `<text class="axis-label" x="${PAD.l - 8}" y="${(y + 4).toFixed(1)}" text-anchor="end">${fmtN(v)}</text>`;
   }
 
-  // Line + area
-  const pts = series.map((s,i) => [xp(i), yp(s.v)]);
-  const linePts = pts.map((p,i) => (i===0?`M${p[0]},${p[1]}`:`L${p[0]},${p[1]}`)).join(' ');
-  const areaPts = linePts + ` L${pts[pts.length-1][0]},${yp(0)} L${pts[0][0]},${yp(0)} Z`;
+  // 200K threshold line
+  let threshLine = '';
+  if (maxV >= DAY_LIMIT) {
+    const ty = yp(DAY_LIMIT);
+    threshLine = `
+      <line x1="${PAD.l}" y1="${ty.toFixed(1)}" x2="${VW - PAD.r}" y2="${ty.toFixed(1)}"
+        stroke="var(--red)" stroke-width="1" stroke-dasharray="4 3" opacity=".45"/>
+      <text x="${VW - PAD.r + 3}" y="${(ty + 4).toFixed(1)}"
+        fill="var(--red)" font-size="9" font-family="system-ui,sans-serif">200K</text>`;
+  }
 
-  // X-axis labels (show at most 8 evenly)
-  const step = Math.max(1, Math.ceil(n/8));
+  // Line + area paths
+  const pts      = days.map((d, i) => [xp(i), yp(d.total)]);
+  const linePath = pts.map((p, i) =>
+    (i === 0 ? `M${p[0].toFixed(1)},${p[1].toFixed(1)}` : `L${p[0].toFixed(1)},${p[1].toFixed(1)}`)
+  ).join(' ');
+  const areaPath = linePath
+    + ` L${pts[pts.length-1][0].toFixed(1)},${yp(0).toFixed(1)}`
+    + ` L${pts[0][0].toFixed(1)},${yp(0).toFixed(1)} Z`;
+
+  // X labels (at most ~8)
+  const step = Math.max(1, Math.ceil(n / 8));
   let xLabels = '';
-  series.forEach((s,i) => {
-    if (i % step !== 0 && i !== n-1) return;
-    xLabels += `<text x="${xp(i)}" y="${VH-PAD.b+18}" text-anchor="middle" fill="var(--text3)" font-size="10" font-family="sans-serif">${esc(s.label)}</text>`;
+  days.forEach((d, i) => {
+    if (i % step !== 0 && i !== n - 1) return;
+    xLabels += `<text class="axis-label" x="${xp(i).toFixed(1)}" y="${VH - PAD.b + 16}"
+      text-anchor="middle">${esc(d.date.slice(5))}</text>`;
   });
 
   // Dots
   let dots = '';
-  series.forEach((s,i) => {
-    if (s.v === 0) return;
-    const alert = isHourly && s.v >= WARN_HR;
-    const col   = alert ? 'var(--red)' : 'var(--haiku)';
-    const r     = alert ? 5.5 : 3.5;
+  days.forEach((d, i) => {
+    const warn = d.total > DAY_LIMIT;
+    const col  = warn ? 'var(--red)' : 'var(--teal)';
+    const r    = warn ? 6 : 4;
+    const glow = warn
+      ? `stroke="rgba(248,113,113,.25)" stroke-width="7"`
+      : `stroke="rgba(45,212,191,.18)" stroke-width="5"`;
     dots += `<circle
-      cx="${xp(i)}" cy="${yp(s.v)}" r="${r}"
-      fill="${col}" stroke="${alert?'rgba(245,101,101,.3)':'rgba(26,211,232,.2)'}" stroke-width="${alert?5:3}"
-      class="dot-pt"
-      data-label="${esc(s.label)}"
-      data-v="${s.v}"
-      data-in="${s.in}"
-      data-out="${s.out}"
-      data-alert="${alert}"
+      cx="${xp(i).toFixed(1)}" cy="${yp(d.total).toFixed(1)}" r="${r}"
+      fill="${col}" ${glow} class="tl-dot"
+      data-date="${esc(d.date)}"
+      data-total="${d.total}"
+      data-in="${d.input}"
+      data-out="${d.output}"
+      data-warn="${warn}"
     />`;
   });
 
-  svg.innerHTML = `
+  svgEl.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
+  svgEl.innerHTML = `
     ${grid}
-    <path d="${areaPts}" fill="var(--haiku)" opacity=".1"/>
-    <path d="${linePts}" fill="none" stroke="var(--haiku)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${threshLine}
+    <path class="area-path" d="${areaPath}"/>
+    <path class="line-path"  d="${linePath}"/>
     ${yLabels}
     ${xLabels}
     ${dots}
   `;
 
-  // Attach tooltip listeners
+  // Tooltip listeners
   const tip = $('tip');
-  svg.querySelectorAll('.dot-pt').forEach(dot => {
-    dot.style.cursor = 'default';
+  svgEl.querySelectorAll('.tl-dot').forEach(dot => {
+    dot.style.cursor = 'crosshair';
     dot.addEventListener('mouseenter', e => {
       const d = e.target.dataset;
-      $('tip-head').textContent = d.label;
-      $('tip-val').innerHTML    = `${fmtFull(+d.v)} tokens &nbsp;·&nbsp; ${fmtFull(+d.in)} in / ${fmtFull(+d.out)} out`;
-      $('tip-warn').textContent = d.alert==='true' ? `⚠ Exceeds ${fmtN(WARN_HR)} threshold` : '';
+      $('tip-h').textContent = d.date;
+      $('tip-v').innerHTML   =
+        `${fmtFull(+d.total)} total &nbsp;·&nbsp; ${fmtFull(+d.in)} in / ${fmtFull(+d.out)} out`;
+      $('tip-w').textContent = d.warn === 'true'
+        ? `⚠ Exceeds ${fmtN(DAY_LIMIT)} daily limit` : '';
       tip.classList.add('on');
     });
     dot.addEventListener('mousemove', e => {
-      tip.style.left = (e.clientX+16)+'px';
-      tip.style.top  = (e.clientY-12)+'px';
+      tip.style.left = (e.clientX + 16) + 'px';
+      tip.style.top  = (e.clientY - 12) + 'px';
     });
     dot.addEventListener('mouseleave', () => tip.classList.remove('on'));
   });
 }
 
 /* ────────────────────────────────────────────────────────────────────
-   RENDER TABLE
+   RENDER: TABLE
 ──────────────────────────────────────────────────────────────────── */
-function renderTable(items) {
-  const tbody = $('tbl-body');
-  $('row-count').textContent = `${items.length.toLocaleString()} record${items.length!==1?'s':''}`;
+function renderTable(rows) {
+  // Sort newest-first by date string (ISO format sorts correctly)
+  const sorted = [...rows].sort((a, b) => b.date.localeCompare(a.date));
 
-  if (!items.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="tbl-empty">No records returned</td></tr>';
-    return;
-  }
+  $('tbl-count').textContent = `${sorted.length.toLocaleString()} row${sorted.length !== 1 ? 's' : ''}`;
 
-  // Sort newest-first by timestamp
-  const sorted = [...items].sort((a,b) => {
-    const ta = new Date(getTS(a)||0).getTime();
-    const tb = new Date(getTS(b)||0).getTime();
-    return tb-ta;
-  });
-
-  const MAX = 500;
-  let html = sorted.slice(0,MAX).map(item => {
-    const ts   = getTS(item);
-    const time = ts ? new Date(ts).toLocaleString() : (item.date||'—');
-    const fam  = family(item.model);
-    const col  = COLORS[fam];
-    const inT  = item.input_tokens  || 0;
-    const outT = item.output_tokens || 0;
-    const reqs = item.request_count || item.count || 1;
-    const cost = itemCost(item);
+  const MAX = 2000;
+  let html = sorted.slice(0, MAX).map(r => {
+    const tot  = r.input + r.output + r.cache_create + r.cache_read;
+    const cost = rowCostAUD(r);
+    const col  = MODEL_COLOR[r.fam];
     return `<tr>
-      <td class="mono" style="color:var(--text3);font-size:11.5px">${esc(time)}</td>
-      <td><span class="tag"><span class="dot" style="background:${col}"></span>${esc(shortModel(item.model))}</span></td>
-      <td class="mono">${fmtFull(inT)}</td>
-      <td class="mono">${fmtFull(outT)}</td>
-      <td class="mono">${fmtFull(reqs)}</td>
-      <td class="mono cost-val">${fmtUSD(cost)}</td>
+      <td class="mono" style="color:var(--tx2)">${esc(r.date)}</td>
+      <td><span class="tag"><span class="dot" style="background:${col}"></span>${esc(r.model)}</span></td>
+      <td class="mono">${fmtFull(r.input)}</td>
+      <td class="mono">${fmtFull(r.output)}</td>
+      <td class="mono" style="color:var(--tx2)">${fmtFull(r.cache_create)}</td>
+      <td class="mono" style="color:var(--tx2)">${fmtFull(r.cache_read)}</td>
+      <td class="mono">${fmtFull(tot)}</td>
+      <td class="mono cost-cell">${fmtAUD(cost)}</td>
     </tr>`;
   }).join('');
 
-  if (sorted.length > MAX) {
-    html += `<tr><td colspan="6" class="tbl-empty">Showing ${MAX} of ${sorted.length.toLocaleString()} records</td></tr>`;
-  }
-  tbody.innerHTML = html;
+  if (sorted.length > MAX)
+    html += `<tr><td colspan="8" class="tbl-empty">
+      Showing first ${MAX.toLocaleString()} of ${sorted.length.toLocaleString()} rows
+    </td></tr>`;
+
+  $('tbl-body').innerHTML = html;
+  $('tbl-card').style.display = '';
 }
 
 /* ────────────────────────────────────────────────────────────────────
-   MAIN LOAD
+   PROCESS FILE
 ──────────────────────────────────────────────────────────────────── */
-let timer = null;
-
-async function load() {
-  const key   = $('key-input').value.trim();
-  const start = $('d-start').value;
-  const end   = $('d-end').value;
-  const errEl = $('err-msg');
-
-  errEl.style.display = 'none';
-
-  if (!key)   { showErr('Please enter your Admin API key.'); return; }
-  if (!start || !end) { showErr('Please select a date range.'); return; }
-
-  localStorage.setItem(LS_KEY, key);
-  setLoading(true);
-
+function processFile(text, filename) {
   try {
-    const { items, raw } = await fetchAll(key, start, end, ['model','api_key_id']);
+    const { rows: rawRows } = parseCSV(text);
+    if (!rawRows.length) { alert('CSV appears empty or could not be parsed.'); return; }
 
-    $('raw').textContent = JSON.stringify(raw, null, 2);
+    const rows = buildRows(rawRows);
+    if (!rows.length) { alert('No valid rows found. Ensure the CSV has a "Date" column.'); return; }
 
-    const p = processItems(items);
-    renderStats(p);
-    renderModelBars(p);
-    renderTimeline(p);
-    renderTable(items);
+    const agg = aggregate(rows);
 
-    $('ts').textContent = 'Updated ' + new Date().toLocaleTimeString();
-    scheduleRefresh();
+    // Update file pill in header
+    $('file-name').textContent = filename || 'data.csv';
+    $('file-rows').textContent = `${rows.length.toLocaleString()} rows`;
+    $('file-pill').classList.remove('hide');
+
+    // Shrink drop zone to a compact reload strip
+    const dz = $('drop-zone');
+    dz.style.padding = '14px 24px';
+    dz.querySelector('h2').textContent = 'Drop a new file to reload';
+    dz.querySelector('p').innerHTML =
+      'Or <span onclick="document.getElementById(\'file-input\').click()">browse to select</span>';
+
+    // Render everything
+    renderAlert(agg.days);
+    renderStats(agg);
+    $('chart-row').style.display = '';
+    renderModelBars(agg.models);
+    renderTimeline(agg.days);
+    renderTable(rows);
+
   } catch (err) {
-    let msg = err.message || 'Unknown error';
-    if (/failed to fetch|cors|network/i.test(msg)) {
-      msg = 'Network error — the Anthropic Admin API may block direct browser requests (CORS). '
-          + 'Try a CORS-unblock browser extension, or use a local proxy.';
-    }
-    showErr(msg);
-    $('raw').textContent = 'Error: ' + msg;
-  } finally {
-    setLoading(false);
+    console.error(err);
+    alert('Failed to parse CSV: ' + err.message);
   }
 }
 
-function showErr(msg) {
-  const el = $('err-msg');
-  el.textContent = msg;
-  el.style.display = 'block';
-}
-
-function setLoading(on) {
-  $('veil').classList.toggle('hide', !on);
-  $('refresh-btn').disabled = on;
-}
-
-function scheduleRefresh() {
-  if (timer) clearTimeout(timer);
-  timer = setTimeout(load, REFRESH);
-}
-
 /* ────────────────────────────────────────────────────────────────────
-   INIT
+   DRAG & DROP + FILE INPUT
 ──────────────────────────────────────────────────────────────────── */
-(function init() {
-  const saved = localStorage.getItem(LS_KEY);
-  if (saved) $('key-input').value = saved;
+const dz = $('drop-zone');
 
-  $('d-end').value   = todayStr();
-  $('d-start').value = nDaysAgo(7);
+dz.addEventListener('dragover', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  dz.classList.add('over');
+});
 
-  if (saved) load();
-})();
+dz.addEventListener('dragleave', e => {
+  if (!dz.contains(e.relatedTarget)) dz.classList.remove('over');
+});
+
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  dz.classList.remove('over');
+  const file = e.dataTransfer?.files?.[0];
+  if (file) readFile(file);
+});
+
+$('file-input').addEventListener('change', e => {
+  const file = e.target.files?.[0];
+  if (file) readFile(file);
+  e.target.value = '';  // reset so same file can be re-dropped
+});
+
+// Clicking the drop zone (but not the browse span) also opens picker
+dz.addEventListener('click', e => {
+  if (e.target.tagName !== 'SPAN') $('file-input').click();
+});
+
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload  = ev => processFile(ev.target.result, file.name);
+  reader.onerror = ()  => alert('Could not read the file.');
+  reader.readAsText(file);
+}
 </script>
 </body>
 </html>
