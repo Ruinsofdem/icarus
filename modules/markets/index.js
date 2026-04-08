@@ -34,8 +34,8 @@ const state = {
  * @returns {Promise<number|null>} closing price or null on error/no data
  */
 async function fetchPrice(ticker) {
-  const apiKey = process.env.MASSIVE_API_KEY;
-  if (!apiKey) throw new Error('MASSIVE_API_KEY is not set');
+  const apiKey = process.env.POLYGON_API_KEY || process.env.MASSIVE_API_KEY;
+  if (!apiKey) throw new Error('POLYGON_API_KEY (or MASSIVE_API_KEY) is not set');
 
   const url = `${POLYGON_BASE}/v2/aggs/ticker/${encodeURIComponent(ticker)}/prev?adjusted=true&apiKey=${apiKey}`;
   const response = await axios.get(url, { timeout: 10_000 });
