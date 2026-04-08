@@ -1,3 +1,7 @@
+// ─── Global error handlers (must be first) ───────────────────────────────────
+process.on('uncaughtException', (err) => console.error('[FATAL] uncaughtException:', err));
+process.on('unhandledRejection', (reason) => console.error('[FATAL] unhandledRejection:', reason));
+
 const path = require('path');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -17,45 +21,51 @@ const {
   createMessage,
 } = require('./config');
 
-validateEnv([
-  'TWILIO_AUTH_TOKEN',
-  'TWILIO_WHATSAPP_NUMBER',
-  'MY_WHATSAPP_NUMBER',
-]);
+// Warn about missing Twilio vars but don't exit — server must stay up for Railway health checks
+['TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_NUMBER', 'MY_WHATSAPP_NUMBER'].forEach(k => {
+  if (!process.env[k]) console.warn(`[Icarus] WARNING: ${k} not set — WhatsApp features disabled`);
+});
 
 // ─── Module imports ───────────────────────────────────────────────────────────
 
+function safeRequire(mod) {
+  try { return require(mod); } catch (e) {
+    console.error(`[Icarus] Failed to load module ${mod}:`, e.message);
+    return { init: () => require('express').Router(), handler: () => {}, tools: [] };
+  }
+}
+
 // Batch A
-const visionModule   = require('./modules/vision/index');
-const briefingModule = require('./modules/briefing/index');
-const browserModule  = require('./modules/browser/index');
+const visionModule   = safeRequire('./modules/vision/index');
+const briefingModule = safeRequire('./modules/briefing/index');
+const browserModule  = safeRequire('./modules/browser/index');
 
 // Batch B
-const stripeModule  = require('./modules/stripe');
-const voiceModule   = require('./modules/voice');
-const marketsModule = require('./modules/markets');
+const stripeModule  = safeRequire('./modules/stripe');
+const voiceModule   = safeRequire('./modules/voice');
+const marketsModule = safeRequire('./modules/markets');
 
 // Batch C
-const memoryModule    = require('./modules/memory');
-const knowledgeModule = require('./modules/knowledge');
-const anomalyModule   = require('./modules/anomaly');
-const decisionsModule = require('./modules/decisions');
-const selflogModule   = require('./modules/selflog');
+const memoryModule    = safeRequire('./modules/memory');
+const knowledgeModule = safeRequire('./modules/knowledge');
+const anomalyModule   = safeRequire('./modules/anomaly');
+const decisionsModule = safeRequire('./modules/decisions');
+const selflogModule   = safeRequire('./modules/selflog');
 
 // Batch D
-const orchestrator = require('./modules/orchestrator');
-const outreach     = require('./modules/outreach');
-const brainSync    = require('./modules/brain-sync');
+const orchestrator = safeRequire('./modules/orchestrator');
+const outreach     = safeRequire('./modules/outreach');
+const brainSync    = safeRequire('./modules/brain-sync');
 
 // Batch E
-const dashboardV2      = require('./modules/dashboard-v2');
-const whatsappCommands = require('./modules/whatsapp-commands');
+const dashboardV2      = safeRequire('./modules/dashboard-v2');
+const whatsappCommands = safeRequire('./modules/whatsapp-commands');
 
 const app = express();
 app.set('trust proxy', 1); // required for correct URL reconstruction behind ngrok/proxy
 
 // Stripe webhook MUST be mounted before express.json (needs raw body)
-app.use('/stripe', stripeModule.init());
+try { app.use('/stripe', stripeModule.init()); } catch (e) { console.error('[Icarus] stripe init failed:', e.message); }
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
@@ -63,10 +73,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/gpi', gpiRoutes);
 
 // Batch B routes
-const voiceRouter = voiceModule.init();
+let voiceRouter;
+try { voiceRouter = voiceModule.init(); } catch (e) { console.error('[Icarus] voice init failed:', e.message); voiceRouter = express.Router(); }
 app.use('/voice',     voiceRouter);
-app.use('/api/voice', voiceRouter);   // alias used by Twilio webhooks + /call command
-app.use('/markets', marketsModule.init());
+app.use('/api/voice', voiceRouter);
+try { app.use('/markets', marketsModule.init()); } catch (e) { console.error('[Icarus] markets init failed:', e.message); }
 
 // ─── Rate limiter (per sender phone number) ───────────────────────────────────
 
@@ -426,34 +437,34 @@ app.post('/whatsapp', validateTwilioSignature, async (req, res) => {
 // ─── Module init ──────────────────────────────────────────────────────────────
 
 // Batch A
-visionModule.init(app);
-briefingModule.init(app);
-browserModule.init(app);
+try { visionModule.init(app); }   catch (e) { console.error('[Icarus] vision init failed:', e.message); }
+try { briefingModule.init(app); } catch (e) { console.error('[Icarus] briefing init failed:', e.message); }
+try { browserModule.init(app); }  catch (e) { console.error('[Icarus] browser init failed:', e.message); }
 
 // Batch C — modules register routes onto a shared router
 const batchCRouter = express.Router();
-memoryModule.init();
-knowledgeModule.init();
-anomalyModule.init();
-decisionsModule.init();
-selflogModule.init();
-memoryModule.handler(batchCRouter);
-knowledgeModule.handler(batchCRouter);
-anomalyModule.handler(batchCRouter);
-decisionsModule.handler(batchCRouter);
-selflogModule.handler(batchCRouter);
+try { memoryModule.init();    } catch (e) { console.error('[Icarus] memory init failed:', e.message); }
+try { knowledgeModule.init(); } catch (e) { console.error('[Icarus] knowledge init failed:', e.message); }
+try { anomalyModule.init();   } catch (e) { console.error('[Icarus] anomaly init failed:', e.message); }
+try { decisionsModule.init(); } catch (e) { console.error('[Icarus] decisions init failed:', e.message); }
+try { selflogModule.init();   } catch (e) { console.error('[Icarus] selflog init failed:', e.message); }
+try { memoryModule.handler(batchCRouter);    } catch (e) { console.error('[Icarus] memory handler failed:', e.message); }
+try { knowledgeModule.handler(batchCRouter); } catch (e) { console.error('[Icarus] knowledge handler failed:', e.message); }
+try { anomalyModule.handler(batchCRouter);   } catch (e) { console.error('[Icarus] anomaly handler failed:', e.message); }
+try { decisionsModule.handler(batchCRouter); } catch (e) { console.error('[Icarus] decisions handler failed:', e.message); }
+try { selflogModule.handler(batchCRouter);   } catch (e) { console.error('[Icarus] selflog handler failed:', e.message); }
 app.use(batchCRouter);
 
 // Batch D
-orchestrator.init();
-outreach.init();
-brainSync.init();
-orchestrator.handler(app);
-outreach.handler(app);
-brainSync.handler(app);
+try { orchestrator.init(); } catch (e) { console.error('[Icarus] orchestrator init failed:', e.message); }
+try { outreach.init();     } catch (e) { console.error('[Icarus] outreach init failed:', e.message); }
+try { brainSync.init();    } catch (e) { console.error('[Icarus] brainSync init failed:', e.message); }
+try { orchestrator.handler(app); } catch (e) { console.error('[Icarus] orchestrator handler failed:', e.message); }
+try { outreach.handler(app);     } catch (e) { console.error('[Icarus] outreach handler failed:', e.message); }
+try { brainSync.handler(app);    } catch (e) { console.error('[Icarus] brainSync handler failed:', e.message); }
 
 // Batch E (httpServer created below at Start)
-whatsappCommands.init();
+try { whatsappCommands.init(); } catch (e) { console.error('[Icarus] whatsappCommands init failed:', e.message); }
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
@@ -462,7 +473,7 @@ const PORT = process.env.PORT || 3000;
 const httpServer = http.createServer(app);
 
 // Dashboard v2 uses socket.io — pass the http server
-dashboardV2.init(app, httpServer);
+try { dashboardV2.init(app, httpServer); } catch (e) { console.error('[Icarus] dashboardV2 init failed:', e.message); }
 
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`⚡ Icarus WhatsApp server running on port ${PORT}`);
