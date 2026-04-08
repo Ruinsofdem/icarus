@@ -14,8 +14,7 @@ const express = require('express');
 const gpiRoutes = require('./gpi-nsw/routes');
 
 if (!process.env.ANTHROPIC_API_KEY) {
-  console.error('[GPI] ERROR: ANTHROPIC_API_KEY is not set. Add it to your .env file.');
-  process.exit(1);
+  console.warn('[GPI] WARNING: ANTHROPIC_API_KEY is not set — GPI agents will not function.');
 }
 
 const app = express();

@@ -26,15 +26,14 @@ const SUMMARY_MARKER = '[ICARUS_CONTEXT_v2]\n';
 function validateEnv(keys) {
   const missing = keys.filter(k => !process.env[k]);
   if (missing.length) {
-    console.error(`[Icarus] Missing required env vars: ${missing.join(', ')}`);
-    process.exit(1);
+    console.warn(`[Icarus] Missing env vars: ${missing.join(', ')} — some features may be unavailable`);
   }
 }
 
 // ─── Anthropic client (singleton) ────────────────────────────────────────────
 
 validateEnv(['ANTHROPIC_API_KEY']);
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
 
 // ─── System prompts ───────────────────────────────────────────────────────────
 
