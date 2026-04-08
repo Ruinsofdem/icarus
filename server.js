@@ -2,8 +2,28 @@
 process.on('uncaughtException', (err) => console.error('[FATAL] uncaughtException:', err));
 process.on('unhandledRejection', (reason) => console.error('[FATAL] unhandledRejection:', reason));
 
-const path = require('path');
+// ─── Bind to PORT immediately so Railway health checks always succeed ─────────
+const http   = require('http');
 const express = require('express');
+const PORT   = parseInt(process.env.PORT, 10) || 3000;
+const app    = express();
+const httpServer = http.createServer(app);
+
+app.get('/',           (_req, res) => res.json({ status: 'ok', service: 'icarus' }));
+app.get('/health',     (_req, res) => res.json({ ok: true }));
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
+
+httpServer.on('error', (err) => {
+  console.error(`[Icarus] FATAL: port ${PORT} bind failed:`, err.message);
+  process.exit(1);
+});
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`⚡ Icarus listening on port ${PORT}`);
+});
+
+// ─── Load remaining dependencies (sync — completes before first real request) ─
+
+const path = require('path');
 const bodyParser = require('body-parser');
 const twilio = require('twilio');
 const { getAuthUrl, saveToken, readEmails, sendEmail } = require('./gmail');
@@ -61,7 +81,6 @@ const brainSync    = safeRequire('./modules/brain-sync');
 const dashboardV2      = safeRequire('./modules/dashboard-v2');
 const whatsappCommands = safeRequire('./modules/whatsapp-commands');
 
-const app = express();
 app.set('trust proxy', 1); // required for correct URL reconstruction behind ngrok/proxy
 
 // Stripe webhook MUST be mounted before express.json (needs raw body)
@@ -468,26 +487,15 @@ try { whatsappCommands.init(); } catch (e) { console.error('[Icarus] whatsappCom
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
-const http = require('http');
-const PORT = process.env.PORT || 3000;
-const httpServer = http.createServer(app);
-
-// Dashboard v2 uses socket.io — pass the http server
+// Dashboard v2 uses socket.io — pass the http server created at the top
 try { dashboardV2.init(app, httpServer); } catch (e) { console.error('[Icarus] dashboardV2 init failed:', e.message); }
 
-httpServer.on('error', (err) => {
-  console.error(`[Icarus] FATAL: Failed to bind port ${PORT}:`, err.message);
-  process.exit(1);
-});
-
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`⚡ Icarus WhatsApp server running on port ${PORT} (NODE_ENV=${process.env.NODE_ENV || 'development'})`);
-  const fs = require('fs');
-  if (process.env.GMAIL_REFRESH_TOKEN) {
-    console.log('[Icarus] Gmail auth ready — using GMAIL_REFRESH_TOKEN env var.');
-  } else if (fs.existsSync('gmail_token.json')) {
-    console.log('[Icarus] Gmail token found — Gmail/Calendar tools ready.');
-  } else {
-    console.warn('[Icarus] WARNING: No Gmail auth found (no GMAIL_REFRESH_TOKEN env var and no gmail_token.json). Visit /auth to authenticate.');
-  }
-});
+// Log Gmail auth status (informational)
+const fs = require('fs');
+if (process.env.GMAIL_REFRESH_TOKEN) {
+  console.log('[Icarus] Gmail auth ready — using GMAIL_REFRESH_TOKEN env var.');
+} else if (fs.existsSync('gmail_token.json')) {
+  console.log('[Icarus] Gmail token found — Gmail/Calendar tools ready.');
+} else {
+  console.warn('[Icarus] WARNING: No Gmail auth found. Visit /auth to authenticate.');
+}
