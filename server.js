@@ -101,7 +101,8 @@ function isRateLimited(sender) {
 
 function validateTwilioSignature(req, res, next) {
   const signature = req.headers['x-twilio-signature'];
-  const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+  const proto = req.headers['x-forwarded-proto'] || req.protocol;
+  const url = `${proto}://${req.get('host')}${req.originalUrl}`;
   if (!signature || !twilio.validateRequest(process.env.TWILIO_AUTH_TOKEN, signature, url, req.body)) {
     return res.status(403).send('Forbidden');
   }
