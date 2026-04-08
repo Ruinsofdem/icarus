@@ -213,7 +213,9 @@ async function executeTool(name, input) {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
+app.get('/', (_req, res) => res.json({ status: 'ok', service: 'icarus' }));
 app.get('/health', (_req, res) => res.json({ ok: true }));
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 
 app.get('/auth/status', (_req, res) => {
   const fs = require('fs');
