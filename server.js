@@ -475,8 +475,13 @@ const httpServer = http.createServer(app);
 // Dashboard v2 uses socket.io — pass the http server
 try { dashboardV2.init(app, httpServer); } catch (e) { console.error('[Icarus] dashboardV2 init failed:', e.message); }
 
+httpServer.on('error', (err) => {
+  console.error(`[Icarus] FATAL: Failed to bind port ${PORT}:`, err.message);
+  process.exit(1);
+});
+
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`⚡ Icarus WhatsApp server running on port ${PORT}`);
+  console.log(`⚡ Icarus WhatsApp server running on port ${PORT} (NODE_ENV=${process.env.NODE_ENV || 'development'})`);
   const fs = require('fs');
   if (process.env.GMAIL_REFRESH_TOKEN) {
     console.log('[Icarus] Gmail auth ready — using GMAIL_REFRESH_TOKEN env var.');
