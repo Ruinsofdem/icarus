@@ -3,10 +3,22 @@ const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const twilio = require('twilio');
 
 const router = express.Router();
 
+const NICK_PHONE   = '+61478764417';
+const TWILIO_FROM  = process.env.TWILIO_PHONE_NUMBER || '+17407363580';
+
 let openaiClient = null;
+
+function escapeXml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
@@ -173,6 +185,65 @@ router.post('/process', async (req, res) => {
         `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Sorry, Icarus encountered an error. Please try again.</Say></Response>`
       );
   }
+});
+
+/**
+ * POST /call
+ * Initiates an outbound Twilio call to Nick's phone (+61478764417).
+ * Optional body: { topic: string }
+ */
+router.post('/call', async (req, res) => {
+  const topic = req.body?.topic || '';
+  try {
+    const client     = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    const baseUrl    = `${req.protocol}://${req.get('host')}`;
+    const webhookUrl = `${baseUrl}/api/voice/webhook${topic ? `?topic=${encodeURIComponent(topic)}` : ''}`;
+    const statusUrl  = `${baseUrl}/api/voice/status`;
+
+    const call = await client.calls.create({
+      url:                  webhookUrl,
+      to:                   NICK_PHONE,
+      from:                 TWILIO_FROM,
+      statusCallback:       statusUrl,
+      statusCallbackMethod: 'POST',
+    });
+
+    console.log(`[Voice] Outbound call initiated: ${call.sid} → ${NICK_PHONE}`);
+    res.json({ ok: true, callSid: call.sid });
+  } catch (err) {
+    console.error('[Voice] Call initiation error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /webhook
+ * Twilio hits this when the outbound call is answered.
+ * Returns TwiML with a spoken greeting, then records the caller's reply.
+ */
+router.post('/webhook', (req, res) => {
+  const topic    = req.query.topic || '';
+  const greeting = topic
+    ? `Icarus online. You requested a briefing on ${topic}. Go ahead.`
+    : 'Icarus online. What do you need?';
+
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Matthew">${escapeXml(greeting)}</Say>
+  <Record action="/api/voice/process" maxLength="30" playBeep="true" trim="trim-silence"/>
+  <Say voice="Polly.Matthew">No message received. Goodbye.</Say>
+</Response>`;
+  res.type('text/xml').send(twiml);
+});
+
+/**
+ * POST /status
+ * Twilio status callback — logs call lifecycle events.
+ */
+router.post('/status', (req, res) => {
+  const { CallSid, CallStatus } = req.body;
+  console.log(`[Voice] Call ${CallSid} status: ${CallStatus}`);
+  res.sendStatus(204);
 });
 
 function handler() {

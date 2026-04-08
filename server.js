@@ -63,7 +63,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/gpi', gpiRoutes);
 
 // Batch B routes
-app.use('/voice',   voiceModule.init());
+const voiceRouter = voiceModule.init();
+app.use('/voice',     voiceRouter);
+app.use('/api/voice', voiceRouter);   // alias used by Twilio webhooks + /call command
 app.use('/markets', marketsModule.init());
 
 // ─── Rate limiter (per sender phone number) ───────────────────────────────────

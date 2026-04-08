@@ -147,6 +147,16 @@ async function cmdBrain() {
   return `*Brain-sync triggered.*\n\n${result}`;
 }
 
+async function cmdCall(args) {
+  const topic  = args ? args.trim() : '';
+  const body   = topic ? { topic } : {};
+  const result = await callModule('/api/voice/call', body);
+  const header = topic
+    ? `*Calling +61478764417 now...*\nTopic: ${topic}`
+    : `*Calling +61478764417 now...*`;
+  return `${header}\n\n${result}`;
+}
+
 function cmdHelp() {
   return [
     '*Icarus Command Centre*',
@@ -157,6 +167,7 @@ function cmdHelp() {
     '/trade [asset] — market price + decision analysis',
     '/scan          — run anomaly detection now',
     '/brain         — trigger brain-sync, return stats',
+    '/call [topic]  — call Nick\'s phone via Twilio',
     '/help          — show this message',
     '',
     '_All other messages are handled by Icarus normally._',
@@ -172,6 +183,7 @@ const COMMANDS = {
   '/trade':  (args) => cmdTrade(args),
   '/scan':   () => cmdScan(),
   '/brain':  () => cmdBrain(),
+  '/call':   (args) => cmdCall(args),
   '/help':   () => Promise.resolve(cmdHelp()),
 };
 
@@ -216,6 +228,7 @@ module.exports = {
   cmdTrade,
   cmdScan,
   cmdBrain,
+  cmdCall,
   cmdHelp,
   getPipelineSummary,
   getStripeMrr,
