@@ -11,6 +11,10 @@ let openaiClient = null;
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 function init() {
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('[Voice] OPENAI_API_KEY missing — voice module disabled.');
+    return router;
+  }
   const { OpenAI } = require('openai');
   openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   console.log('[Voice] Module initialised — Whisper STT + ElevenLabs TTS ready.');
