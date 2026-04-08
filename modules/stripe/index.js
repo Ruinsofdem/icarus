@@ -9,6 +9,10 @@ let stripeClient = null;
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 function init() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.warn('[Stripe] STRIPE_SECRET_KEY missing — Stripe module disabled.');
+    return router;
+  }
   // eslint-disable-next-line global-require
   stripeClient = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
