@@ -206,6 +206,9 @@ router.post('/call', async (req, res) => {
       from:                 TWILIO_FROM,
       statusCallback:       statusUrl,
       statusCallbackMethod: 'POST',
+      machineDetection:     'Enable',
+      asyncAmd:             true,
+      asyncAmdStatusCallback: `${baseUrl}/api/voice/amd-status`,
     });
 
     console.log(`[Voice] Outbound call initiated: ${call.sid} → ${NICK_PHONE}`);
@@ -234,6 +237,28 @@ router.post('/webhook', (req, res) => {
   <Say voice="Polly.Matthew">No message received. Goodbye.</Say>
 </Response>`;
   res.type('text/xml').send(twiml);
+});
+
+/**
+ * POST /amd-status
+ * Twilio Answering Machine Detection callback.
+ * If voicemail is detected, hang up immediately.
+ */
+router.post('/amd-status', async (req, res) => {
+  const { CallSid, AnsweredBy } = req.body;
+  console.log(`[Voice] AMD result for ${CallSid}: ${AnsweredBy}`);
+
+  if (AnsweredBy === 'machine_start' || AnsweredBy === 'fax') {
+    // Voicemail detected — hang up
+    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    try {
+      await client.calls(CallSid).update({ status: 'completed' });
+      console.log(`[Voice] Hung up ${CallSid} (voicemail detected)`);
+    } catch (err) {
+      console.error('[Voice] Failed to hang up:', err.message);
+    }
+  }
+  res.sendStatus(204);
 });
 
 /**
