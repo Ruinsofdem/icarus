@@ -38,7 +38,7 @@ function getBaseUrl(req) {
 // Build TwiML that plays/says the response then loops back to record
 function buildResponseTwiml(audioUrl, fallbackText, loop = true) {
   const listenBlock = loop
-    ? `\n  <Record action="/api/voice/process" maxLength="45" playBeep="false" trim="trim-silence" timeout="3"/>\n  <Hangup/>`
+    ? `\n  <Record action="/api/voice/process" maxLength="45" playBeep="false" trim="trim-silence" timeout="10"/>\n  <Hangup/>`
     : `\n  <Hangup/>`;
 
   const speakBlock = audioUrl
@@ -142,7 +142,7 @@ router.post('/incoming', (_req, res) => {
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="Polly.Matthew">Icarus online. What do you need?</Say>
-  <Record action="/api/voice/process" maxLength="45" playBeep="false" trim="trim-silence" timeout="3"/>
+  <Record action="/api/voice/process" maxLength="45" playBeep="false" trim="trim-silence" timeout="10"/>
   <Say voice="Polly.Matthew">No message received. Goodbye.</Say>
   <Hangup/>
 </Response>`;
@@ -161,7 +161,7 @@ router.post('/process', async (req, res) => {
     return res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="Polly.Matthew">I didn't catch that. Go ahead.</Say>
-  <Record action="/api/voice/process" maxLength="45" playBeep="false" trim="trim-silence" timeout="3"/>
+  <Record action="/api/voice/process" maxLength="45" playBeep="false" trim="trim-silence" timeout="10"/>
   <Hangup/>
 </Response>`);
   }
@@ -215,7 +215,7 @@ router.post('/process', async (req, res) => {
     res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="Polly.Matthew">Something went wrong. Go ahead, try again.</Say>
-  <Record action="/api/voice/process" maxLength="45" playBeep="false" trim="trim-silence" timeout="3"/>
+  <Record action="/api/voice/process" maxLength="45" playBeep="false" trim="trim-silence" timeout="10"/>
   <Hangup/>
 </Response>`);
   }
@@ -265,7 +265,7 @@ router.post('/webhook', (req, res) => {
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="Polly.Matthew">${greeting}</Say>
-  <Record action="/api/voice/process" maxLength="45" playBeep="false" trim="trim-silence" timeout="3"/>
+  <Record action="/api/voice/process" maxLength="45" playBeep="false" trim="trim-silence" timeout="10"/>
   <Say voice="Polly.Matthew">No response. Goodbye.</Say>
   <Hangup/>
 </Response>`;
