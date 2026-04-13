@@ -61,6 +61,9 @@ const brainSync    = safeRequire('./modules/brain-sync');
 const dashboardV2      = safeRequire('./modules/dashboard-v2');
 const whatsappCommands = safeRequire('./modules/whatsapp-commands');
 
+// Batch F — Prospect Intelligence
+const prospectSearch = safeRequire('./modules/prospect-search');
+
 const app = express();
 app.set('trust proxy', 1); // required for correct URL reconstruction behind ngrok/proxy
 
@@ -78,6 +81,7 @@ try { voiceRouter = voiceModule.init(); } catch (e) { console.error('[Icarus] vo
 app.use('/voice',     voiceRouter);
 app.use('/api/voice', voiceRouter);
 try { app.use('/markets', marketsModule.init()); } catch (e) { console.error('[Icarus] markets init failed:', e.message); }
+try { app.use('/prospects', prospectSearch.init()); } catch (e) { console.error('[Icarus] prospect-search init failed:', e.message); }
 
 // ─── Rate limiter (per sender phone number) ───────────────────────────────────
 
@@ -134,6 +138,7 @@ const MODULE_A_TOOLS = [
 
 const tools = [
   ...MODULE_A_TOOLS,
+  ...prospectSearch.tools,
   {
     name: 'read_emails',
     description: 'Read unread emails from the Icarus Gmail inbox.',
@@ -221,6 +226,7 @@ async function executeTool(name, input) {
   if (name === 'check_calendar') return await checkCalendar(input.action, input.params || {});
   if (name === 'manage_crm')     return await manageCrm(input.action, input.params || {});
   if (name === 'shell_exec')     return await shellExec(input.command, input.reason || '');
+  if (prospectSearch.tools.some((t) => t.name === name)) return await prospectSearch.handler(name, input);
   return `Unknown tool: ${name}`;
 }
 

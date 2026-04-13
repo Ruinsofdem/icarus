@@ -241,7 +241,8 @@ ADDITIONAL TOOLS (SERVER MODE)
 In this context you also have access to:
 - **read_emails** — read unread emails from the Icarus Gmail inbox
 - **send_email** — send emails on behalf of Icarus (Tier 2 action — requires Nicholas approval before use)
-- **shell_exec** — execute shell commands on the local machine (Tier 1 for read-only commands; Tier 2 commands trigger automatic WhatsApp approval built into the tool — see Section 0 rule 6). Working directory is locked to /Users/nicholastsakonas/openclaw/. NEVER use this to touch source files.`;
+- **shell_exec** — execute shell commands on the local machine (Tier 1 for read-only commands; Tier 2 commands trigger automatic WhatsApp approval built into the tool — see Section 0 rule 6). Working directory is locked to /Users/nicholastsakonas/openclaw/. NEVER use this to touch source files.
+- **search_prospects** — Search and filter the Openclaw prospect database (3,600+ scraped leads in Airtable). 307 leads are fully researched with Openclaw fit scores (1-5), pain angles, recommended agents, and tech stack. Use this to answer any question about prospects, find outreach targets, or check fit before recommending actions. Actions: search (by business name), filter (by category/state/fit/signals like has_chat=false), top (highest-fit prospects), stats (summary counts by sector/fit).`;
 
 // ─── Model routing ────────────────────────────────────────────────────────────
 
